@@ -1,0 +1,191 @@
+// AidLedger schema v1. Every change goes through a reviewed PR.
+// After editing: `npx prisma migrate dev --name <what-changed>`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  COORDINATOR
+  VOLUNTEER
+}
+
+enum HouseholdStatus {
+  ACTIVE
+  MERGED
+  INACTIVE
+}
+
+enum FlagType {
+  ELDERLY
+  DISABILITY
+  SINGLE_PARENT
+  CHRONIC_ILLNESS
+  DISPLACED
+  LARGE_FAMILY
+  OTHER
+}
+
+enum DuplicateStatus {
+  OPEN
+  MERGED
+  DISMISSED
+}
+
+enum RoundStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String         @id @default(cuid())
+  name         String
+  email        String         @unique
+  passwordHash String
+  role         Role           @default(VOLUNTEER)
+  active       Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  registered   Household[]    @relation("RegisteredBy")
+  pickups      Distribution[] @relation("PickupVolunteer")
+  voids        Distribution[] @relation("PickupVoidedBy")
+  auditLogs    AuditLog[]
+}
+
+model Area {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  households Household[]
+}
+
+model Household {
+  id                 String          @id @default(cuid())
+  headName           String // as typed, Arabic or Latin
+  headNameNormalized String // filled on save, used by duplicate matching
+  phone              String? // stored as +961XXXXXXXX
+  areaId             String
+  area               Area            @relation(fields: [areaId], references: [id])
+  address            String?
+  cardCode           String          @unique // random code printed on the QR card, never personal data
+  consentGiven       Boolean
+  consentAt          DateTime
+  status             HouseholdStatus @default(ACTIVE)
+  mergedIntoId       String? // set when a duplicate is merged into another household
+  registeredById     String
+  registeredBy       User            @relation("RegisteredBy", fields: [registeredById], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  members            Member[]
+  flags              HouseholdFlag[]
+  distributions      Distribution[]
+
+  @@index([headNameNormalized])
+  @@index([phone])
+  @@index([areaId])
+}
+
+model Member {
+  id          String    @id @default(cuid())
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name        String
+  birthYear   Int?
+  relation    String // head, spouse, child, parent, other
+}
+
+model HouseholdFlag {
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  type        FlagType
+
+  @@id([householdId, type])
+}
+
+// Duplicate matching
+model DuplicateCandidate {
+  id           String          @id @default(cuid())
+  householdAId String
+  householdBId String
+  score        Float
+  reasons      Json
+  status       DuplicateStatus @default(OPEN)
+  createdAt    DateTime        @default(now())
+
+  @@unique([householdAId, householdBId])
+}
+
+// Rounds and pickups
+model Program {
+  id        String    @id @default(cuid())
+  name      String
+  donor     String?
+  startDate DateTime
+  endDate   DateTime?
+  rounds    Round[]
+}
+
+model Round {
+  id               String         @id @default(cuid())
+  programId        String
+  program          Program        @relation(fields: [programId], references: [id])
+  name             String
+  date             DateTime
+  location         String
+  status           RoundStatus    @default(DRAFT) // pickups only while OPEN
+  eligibilityRules Json // { areaIds?: string[], flags?: FlagType[], minHouseholdSize?: number }
+  items            Item[]
+  distributions    Distribution[]
+}
+
+model Item {
+  id                   String @id @default(cuid())
+  roundId              String
+  round                Round  @relation(fields: [roundId], references: [id])
+  name                 String
+  quantityPerHousehold Int
+}
+
+model Distribution {
+  id          String    @id @default(cuid())
+  roundId     String
+  round       Round     @relation(fields: [roundId], references: [id])
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id])
+  volunteerId String
+  volunteer   User      @relation("PickupVolunteer", fields: [volunteerId], references: [id])
+  itemsGiven  Json
+  collectedBy String? // proxy pickup; null = the household itself
+  point       String? // distribution table/point, shown on "Already collected"
+  createdAt   DateTime  @default(now())
+  voidedAt    DateTime? // set when a coordinator voids a pickup recorded in error
+  voidedById  String?
+  voidedBy    User?     @relation("PickupVoidedBy", fields: [voidedById], references: [id])
+  voidReason  String?
+
+  // One pickup per household per round is enforced by a PARTIAL unique index
+  // added by hand in the migration SQL:
+  //   UNIQUE ("roundId", "householdId") WHERE "voidedAt" IS NULL
+  // Prisma's schema language can't express partial indexes, so it lives only in
+  // prisma/migrations/*_init/migration.sql. Voided pickups don't count, so a
+  // household can collect again after a void. Do not replace it with
+  // @@unique([roundId, householdId]): that would block re-collection after a void.
+  @@index([roundId, householdId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String // e.g. HOUSEHOLD_CREATED, MERGE, PICKUP_RECORDED, PICKUP_VOIDED
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+}
