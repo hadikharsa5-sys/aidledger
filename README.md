@@ -29,8 +29,8 @@ npm run dev
 ```
 
 `npm install` also generates the Prisma client into `generated/prisma` (git-ignored).
-`db:migrate` creates the tables, `db:seed` adds demo users and areas
-(`admin@aidledger.test`, `coordinator@aidledger.test`, `volunteer@aidledger.test`, password `password123`).
+`db:migrate` creates the tables, `db:seed` adds a demo organisation and one user per role
+(`admin@`, `manager@`, `coordinator@`, `volunteer@aidledger.test`, password `password123`).
 
 `docker compose up -d` starts Postgres 16 with two databases: `aidledger_dev` for the app and `aidledger_test` for tests. The connection strings in `.env.example` already point at them.
 
@@ -46,15 +46,19 @@ Open http://localhost:3000. Edit `app/page.tsx` and the page reloads automatical
 | `npm run build`      | Production build (run before PR) |
 | `npm start`          | Serve the production build       |
 | `npm run db:migrate` | Apply migrations / create a new one after editing the schema |
-| `npm run db:seed`    | Add demo users and areas         |
+| `npm run db:seed`    | Add the demo organisation and users |
 
 ## Database
 
 Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config.ts`, client: `lib/db.ts`.
 
+- Models (MVP Plan section 7): Organisation, User, Household, Member, Consent, DuplicateCandidate, Round, RoundItem,
+  Pickup, AuditLog.
 - Import the client with `import { prisma } from "@/lib/db"` and types from `@/generated/prisma/client`.
+- `pg_trgm` is enabled in the first migration, with a trigram index on `Household.headNameNormalized` for fuzzy matching.
 - After changing the schema run `npm run db:migrate -- --name what-changed` and commit the new folder in `prisma/migrations`.
-- **One pickup per household per round** is enforced by a partial unique index that is hand-written in
+- **One pickup per household per round** is enforced by the partial unique index
+  `Pickup_one_per_household_per_round`, hand-written in
   `prisma/migrations/*_init/migration.sql` (Prisma's schema file can't express it). Voided pickups don't count, so a
   household can collect again after a coordinator voids a mistake. Don't replace it with `@@unique`.
 - Tests that need the database run against `TEST_DATABASE_URL`; pending migrations are applied to it automatically
