@@ -8,5 +8,9 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // Applies pending migrations to TEST_DATABASE_URL before the tests run.
+    globalSetup: ["./__tests__/setup/migrate-test-db.ts"],
+    // Only real test files, not the helpers next to them.
+    include: ["__tests__/**/*.test.{ts,tsx}"],
   },
 });
