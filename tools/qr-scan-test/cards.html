@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MR-09 test cards</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="stylesheet" href="/src/cards.css" />
+  </head>
+  <body>
+    <header class="no-print">
+      <h1>Test cards <small>MR-09</small></h1>
+      <a href="/">← Scan test</a>
+    </header>
+
+    <section class="panel no-print">
+      <p class="hint">Fake household cards for testing only. Each code is random and means nothing, the same way real cards should carry no personal data.</p>
+      <div class="row">
+        <label>How many
+          <select id="count">
+            <option>6</option>
+            <option selected>12</option>
+            <option>24</option>
+          </select>
+        </label>
+        <label>QR size on paper
+          <select id="size">
+            <option value="25">2.5 cm (small)</option>
+            <option value="35" selected>3.5 cm</option>
+            <option value="50">5 cm (large)</option>
+          </select>
+        </label>
+        <label>Error correction
+          <select id="ecc">
+            <option value="L">L (7%)</option>
+            <option value="M" selected>M (15%)</option>
+            <option value="Q">Q (25%)</option>
+            <option value="H">H (30%)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row buttons">
+        <button id="regen">New codes</button>
+        <button id="print" class="primary">Print</button>
+      </div>
+      <p class="hint">Print one sheet per size you want to compare. Higher error correction survives crumpled or dirty cards better but makes the pattern denser.</p>
+    </section>
+
+    <main id="sheet"></main>
+
+    <script type="module" src="/src/cards.js"></script>
+  </body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MR-09 QR scan test</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>QR scan test <small>MR-09</small></h1>
+      <a href="/cards.html">Test cards →</a>
+    </header>
+
+    <section id="setup" class="panel">
+      <label>Phone
+        <input id="phone" placeholder="e.g. Samsung A10, Android 9" autocomplete="off" />
+      </label>
+      <label>Scanner
+        <select id="engine"></select>
+      </label>
+      <div class="row">
+        <label>Light
+          <select id="light">
+            <option>Indoor</option>
+            <option>Dim</option>
+            <option>Outdoor sun</option>
+          </select>
+        </label>
+        <label>Card
+          <select id="card">
+            <option>Printed</option>
+            <option>On a screen</option>
+            <option>Printed, crumpled</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label>Give up after
+          <select id="timeout">
+            <option value="5000">5 s</option>
+            <option value="10000" selected>10 s</option>
+            <option value="20000">20 s</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="auto" checked /> Next scan starts by itself</label>
+      </div>
+      <button id="startBtn" class="primary">Open camera</button>
+      <p id="setupError" class="error" hidden></p>
+    </section>
+
+    <section id="scan" class="panel" hidden>
+      <div id="viewport"></div>
+      <div id="status" class="status idle">Opening camera…</div>
+      <div class="row buttons">
+        <button id="nextBtn" class="primary">Next scan</button>
+        <button id="failBtn">Mark failed</button>
+        <button id="stopBtn">Stop</button>
+      </div>
+      <p class="hint">Hold the next card ready. The timer starts when the status turns blue and stops when the code is read.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Results</h2>
+      <div id="summary"></div>
+      <div class="row buttons">
+        <button id="sendBtn" class="primary">Send to laptop</button>
+        <button id="shareBtn" hidden>Share CSV</button>
+        <button id="downloadBtn">Download CSV</button>
+        <button id="clearBtn" class="danger">Clear all</button>
+      </div>
+      <details>
+        <summary>Every attempt (<span id="count">0</span>)</summary>
+        <div id="log"></div>
+      </details>
+      <details>
+        <summary>This device</summary>
+        <pre id="device"></pre>
+      </details>
+    </section>
+
+    <script type="module" src="/src/scan.js"></script>
+  </body>
+</html>
