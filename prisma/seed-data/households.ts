@@ -38,6 +38,8 @@ export type SeedHousehold = {
 
 export const DEFAULT_SEED = 20261122;
 const REFERENCE_YEAR = 2026;
+export const MIN_PARENT_AGE = 18;
+export const MAX_PARENT_AGE = 45;
 // Households look registered over the 90 days before this date.
 const REGISTRATION_END = new Date("2026-11-15T12:00:00Z");
 
@@ -145,6 +147,11 @@ export function generateHouseholds({ count = 500, seed = DEFAULT_SEED }: Generat
   const usedPhones = new Set<string>();
   const usedCodes = new Set<string>();
 
+  // Catches SEED_HOUSEHOLDS=abc / 0 / -5, which would otherwise wipe the demo
+  // households and silently seed none.
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error(`household count must be a positive whole number, got ${count}`);
+  }
   const maxCombos = (MALE_FIRST_NAMES.length + FEMALE_FIRST_NAMES.length) * FAMILY_NAMES.length;
   if (count > maxCombos / 2) throw new Error(`count ${count} is too high for the name lists`);
 
@@ -184,12 +191,15 @@ export function generateHouseholds({ count = 500, seed = DEFAULT_SEED }: Generat
         relation: "parent",
       });
     }
+    // Children are born when the head is 18 to 45. Where possible they are 25 or
+    // younger (still living at home); an older head has adult children instead.
+    const lastChildYear = Math.min(headBirthYear + MAX_PARENT_AGE, REFERENCE_YEAR - 1);
+    const firstChildYear = Math.min(Math.max(headBirthYear + MIN_PARENT_AGE, REFERENCE_YEAR - 25), lastChildYear);
     while (members.length < size) {
       const childList = chance(rng, 0.5) ? MALE_FIRST_NAMES : FEMALE_FIRST_NAMES;
-      const youngest = Math.max(headBirthYear + 18, REFERENCE_YEAR - 25);
       members.push({
         name: `${spell(rng, pick(rng, childList), script)} ${familyName}`,
-        birthYear: int(rng, youngest, REFERENCE_YEAR - 1),
+        birthYear: int(rng, firstChildYear, lastChildYear),
         relation: "child",
       });
     }

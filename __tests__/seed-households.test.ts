@@ -1,6 +1,11 @@
 // MH-07: checks on the synthetic household generator. No database needed.
 import { describe, expect, it } from "vitest";
-import { generateHouseholds, normalizeLebanesePhone } from "@/prisma/seed-data/households";
+import {
+  generateHouseholds,
+  MAX_PARENT_AGE,
+  MIN_PARENT_AGE,
+  normalizeLebanesePhone,
+} from "@/prisma/seed-data/households";
 
 const households = generateHouseholds();
 const isArabic = (s: string) => /[؀-ۿ]/.test(s);
@@ -45,6 +50,23 @@ describe("synthetic household generator (MH-07)", () => {
       if (h.vulnerabilityFlags.includes("SINGLE_PARENT")) {
         expect(h.members.some((m) => m.relation === "spouse")).toBe(false);
       }
+    }
+  });
+
+  it("has children born when the head was 18 to 45", () => {
+    for (const h of households) {
+      const head = h.members[0];
+      for (const child of h.members.filter((m) => m.relation === "child")) {
+        const ageAtBirth = child.birthYear - head.birthYear;
+        expect(ageAtBirth).toBeGreaterThanOrEqual(MIN_PARENT_AGE);
+        expect(ageAtBirth).toBeLessThanOrEqual(MAX_PARENT_AGE);
+      }
+    }
+  });
+
+  it("rejects a household count that is not a positive whole number", () => {
+    for (const count of [Number("abc"), 0, -5, 2.5]) {
+      expect(() => generateHouseholds({ count })).toThrow(/positive whole number/);
     }
   });
 

@@ -43,7 +43,12 @@ async function seedUsers() {
 // Re-running replaces the demo organisation's households, so the result is
 // always the same data set.
 async function seedHouseholds(organisationId: string, registrarIds: string[]) {
-  const count = Number(process.env.SEED_HOUSEHOLDS ?? 500);
+  const raw = process.env.SEED_HOUSEHOLDS ?? "500";
+  const count = Number(raw);
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error(`SEED_HOUSEHOLDS must be a positive whole number, got "${raw}"`);
+  }
+  // Generated before anything is deleted, so a bad value leaves the database untouched.
   const households = generateHouseholds({ count });
 
   const existing = { organisationId };
