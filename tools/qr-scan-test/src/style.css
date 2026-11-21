@@ -44,3 +44,8 @@ th { color: var(--muted); font-weight: 600; white-space: nowrap; }
 details { margin-top: 10px; }
 summary { cursor: pointer; color: var(--blue); }
 pre { font-size: 0.75rem; white-space: pre-wrap; word-break: break-all; }
+.good { color: var(--green); }
+.bad { color: var(--red); }
+ol.steps { padding-left: 20px; margin: 0; }
+ol.steps li { margin-bottom: 14px; line-height: 1.4; }
+ol.steps button { display: block; width: 100%; margin-top: 6px; }

@@ -1,7 +1,7 @@
-# MR-09 – QR scanning on low-end Android (write-up)
+# MR-09 – QR scanning and offline storage on low-end Android (write-up)
 
 **Ticket:** KAN-44 / MR-09 · **Owner:** Mahmoud · **Sprint 2**
-**Acceptance criteria:** short write-up with chosen library and scan times; fallback plan if scanning is slow.
+**Acceptance criteria:** short write-up with chosen library and scan times; offline storage confirmed on both phones, or limits written down; fallback plan if scanning is slow.
 
 > Fill in the `___` parts after testing. Delete this line before posting.
 
@@ -70,7 +70,32 @@ In order of what the volunteer does at the table:
 6. If a phone is still too slow: **mark it "search only"** and use it for search while
    faster phones scan.
 
-## 6. Notes for MR-13 (scan screen)
+## 6. Offline storage (service worker + IndexedDB)
+
+Test page: `/offline.html`. 50 fake pickups saved in IndexedDB, then checked after each step.
+✓ = page opened and all 50 pickups were still there.
+
+| Check | Phone 1 | Phone 2 |
+| --- | --- | --- |
+| Offline cache (service worker) turned on | ___ | ___ |
+| 50 pickups saved | ___ | ___ |
+| After 5 minutes locked | ___ | ___ |
+| Airplane mode + reload: page opens, pickups there | ___ | ___ |
+| Chrome closed and reopened, still offline | ___ | ___ |
+| Chrome agreed to keep the data ("persisted") | ___ | ___ |
+| Storage available to the site | ___ MB | ___ MB |
+
+**Limits found:**
+
+- Service workers only run on a trusted HTTPS origin (or `localhost`). On the test laptop's
+  self-signed certificate Chrome refuses them, so the offline test used the
+  `unsafely-treat-insecure-origin-as-secure` flag. The real app on Vercel has a proper
+  certificate, so this only affects local testing.
+- If "persisted" is No, Chrome may delete the offline data when the phone runs low on space.
+  MR-19 should sync as soon as signal returns and warn the volunteer about unsynced pickups.
+- ___
+
+## 7. Notes for MR-13 (scan screen)
 
 - Use ___ with `maxScansPerSecond` / `fps` ≈ 10.
 - Camera needs HTTPS on phones, so the demo deployment must be HTTPS. Vercel is fine.

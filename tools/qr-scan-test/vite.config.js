@@ -56,6 +56,7 @@ export default defineConfig(({ mode }) => ({
       input: {
         scan: resolve(import.meta.dirname, "index.html"),
         cards: resolve(import.meta.dirname, "cards.html"),
+        offline: resolve(import.meta.dirname, "offline.html"),
       },
     },
   },

@@ -1,7 +1,13 @@
-# MR-09 spike: QR scanning on low-end Android
+# MR-09 spike: QR scanning and offline storage on low-end Android
 
-Throwaway test app for Jira KAN-44 / MR-09. It compares three ways of reading a QR code
-from the phone camera in the browser and times every scan:
+Throwaway test app for Jira KAN-44 / MR-09. It has three pages:
+
+- `/` **Scan test**: times three ways of reading a QR code from the phone camera.
+- `/cards.html` **Test cards**: printable fake household cards.
+- `/offline.html` **Offline test**: checks the phone keeps an offline copy of the page
+  (service worker) and saved data (IndexedDB) after locking, losing signal and restarting Chrome.
+
+The three scanners compared:
 
 | Scanner | What it is |
 | --- | --- |
@@ -55,9 +61,32 @@ counts as a failure.
 Results are saved on the phone, so closing the tab doesn't lose them.
 **Clear all** wipes them.
 
+To get the results onto the laptop, tap **Send to laptop**; they're saved as CSV files in
+`results/` (git-ignored).
+
+## Offline test (per phone)
+
+**Service workers don't run on a self-signed certificate**, so the HTTPS address above can
+prove IndexedDB but not the offline page cache. For the full test, run the plain-HTTP server
+and tell the phone's Chrome to treat the laptop as secure (test phones only):
+
+```bash
+npx vite --mode nossl --host --port 5174
+```
+
+1. On the phone open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, enter
+   `http://<laptop-wifi-ip>:5174`, set it to **Enabled**, tap **Relaunch**.
+2. Open `http://<laptop-wifi-ip>:5174/offline.html` and follow the 6 steps on the page:
+   turn on the offline cache, save 50 test pickups, lock the phone 5 minutes, airplane mode +
+   reload, close and reopen Chrome, then send the results.
+3. Afterwards set the flag back to **Default**.
+
+The camera also works with this flag, so the scan test can use the same HTTP address.
+
 ## Files
 
 - `src/engines.js` – the three scanners behind one `start(container, onDecode)` shape
 - `src/scan.js` – timing, results table, CSV export
 - `src/cards.js` – printable test cards
+- `offline.html`, `src/offline.js`, `public/sw.js` – offline storage test
 - `MR-09-writeup.md` – the write-up to fill in and attach to the ticket
