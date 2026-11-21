@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AidLedger pickup screens</title>
+<style>
+  :root {
+    --ink: #111418;
+    --ink-2: #3d4651;
+    --line: #c9d0d8;
+    --paper: #ffffff;
+    --canvas: #e9edf1;
+    --brand: #14508a;
+    --ok: #0b6b34;       /* white text on this: 7.0:1 */
+    --stop: #a3150c;     /* white text: 7.6:1 */
+    --warn: #8a3a0b;     /* white text: 7.4:1 */
+    --ok-soft: #e3f3e8;
+    --stop-soft: #fbe7e5;
+    --warn-soft: #fbeee2;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif;
+    color: var(--ink);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); }
+  .page-head { max-width: 1200px; margin: 0 auto; padding: 24px 16px 8px; }
+  .page-head h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  .page-head p { margin: 4px 0; color: var(--ink-2); max-width: 70ch; line-height: 1.45; }
+  .rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .rules li { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; }
+  .flow-title { max-width: 1200px; margin: 28px auto 0; padding: 0 16px; font-size: 1.05rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .gallery { max-width: 1200px; margin: 0 auto; padding: 12px 16px 40px; display: flex; flex-wrap: wrap; gap: 28px; }
+  figure { margin: 0; width: 340px; }
+  figcaption { font-size: 0.9rem; color: var(--ink-2); margin-top: 10px; line-height: 1.4; }
+  figcaption b { color: var(--ink); display: block; font-size: 1rem; }
+
+  /* Phone frame: 360x740 CSS px, a typical low-end Android viewport */
+  .phone {
+    width: 340px; height: 700px; background: var(--paper);
+    border: 10px solid #1d232a; border-radius: 34px; overflow: hidden;
+    display: flex; flex-direction: column; position: relative;
+    box-shadow: 0 10px 30px rgba(17, 20, 24, 0.18);
+    scroll-margin-top: 20px;
+  }
+  .phone:target { outline: 5px solid #f5b400; outline-offset: 4px; }
+  .bar { height: 26px; background: #1d232a; color: #fff; font-size: 12px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; flex: none; }
+  .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex: none; }
+  .top a.back { font-size: 22px; text-decoration: none; color: var(--ink); width: 32px; }
+  .top h2 { margin: 0; font-size: 19px; }
+  .top small { display: block; color: var(--ink-2); font-size: 13px; font-weight: 400; }
+  .body { flex: 1; overflow-y: auto; padding: 14px; }
+  .foot { padding: 12px 14px 16px; border-top: 1px solid var(--line); flex: none; display: grid; gap: 8px; }
+
+  label.f { display: block; font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .in { margin-top: 5px; border: 2px solid var(--line); border-radius: 10px; padding: 11px 12px; font-size: 17px; font-weight: 400; color: var(--ink); background: #fff; }
+  .in.muted { color: #6b7480; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { border: 2px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 15px; font-weight: 600; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .item { display: grid; grid-template-columns: 1fr 64px; gap: 8px; align-items: center; margin-top: 6px; }
+  .qty { text-align: center; }
+  .note { background: #eef3f9; border-radius: 10px; padding: 10px 12px; font-size: 15px; margin: 4px 0 12px; }
+  .note b { font-size: 22px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid var(--brand); border-radius: 10px; overflow: hidden; margin-top: 6px; }
+  .seg span { text-align: center; padding: 9px 0; font-weight: 700; font-size: 15px; color: var(--brand); }
+  .seg span.on { background: var(--brand); color: #fff; }
+
+  .btn { display: block; text-align: center; text-decoration: none; border-radius: 12px; padding: 16px; font-size: 19px; font-weight: 800; border: 3px solid transparent; }
+  .btn.primary { background: var(--brand); color: #fff; }
+  .btn.ok { background: var(--ok); color: #fff; }
+  .btn.ghost { background: #fff; color: var(--ink); border-color: var(--ink); }
+  .btn.small { padding: 11px; font-size: 16px; }
+
+  /* Scan screen */
+  .cam { flex: 1; background: #20262d; position: relative; display: grid; place-items: center; }
+  .cam .frame { width: 230px; height: 230px; border-radius: 14px; position: relative; }
+  .cam .frame i { position: absolute; width: 46px; height: 46px; border: 0 solid #fff; }
+  .cam .frame i:nth-child(1) { top: 0; left: 0; border-width: 6px 0 0 6px; border-top-left-radius: 14px; }
+  .cam .frame i:nth-child(2) { top: 0; right: 0; border-width: 6px 6px 0 0; border-top-right-radius: 14px; }
+  .cam .frame i:nth-child(3) { bottom: 0; left: 0; border-width: 0 0 6px 6px; border-bottom-left-radius: 14px; }
+  .cam .frame i:nth-child(4) { bottom: 0; right: 0; border-width: 0 6px 6px 0; border-bottom-right-radius: 14px; }
+  bdi { unicode-bidi: isolate; }
+  .cam .fakeqr { position: absolute; inset: 55px; background:
+    repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 8px, transparent 8px 16px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 8px, transparent 8px 16px); border-radius: 4px; }
+  .cam .hint { position: absolute; top: 18px; left: 0; right: 0; text-align: center; color: #fff; font-size: 18px; font-weight: 700; }
+  .cam .torch { position: absolute; bottom: 18px; right: 18px; background: rgba(255,255,255,.95); color: var(--ink); border-radius: 999px; padding: 10px 14px; font-weight: 800; font-size: 15px; text-decoration: none; }
+  .progress { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+  .meter { height: 10px; background: #dde3e9; border-radius: 99px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 41%; background: var(--ok); }
+
+  /* Search */
+  .result { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px; border: 2px solid var(--line); border-radius: 12px; margin-bottom: 8px; text-decoration: none; color: var(--ink); }
+  .result .n { font-size: 17px; font-weight: 700; }
+  .result .n span { display: block; font-weight: 400; font-size: 14px; color: var(--ink-2); }
+  .tag { font-size: 13px; font-weight: 800; padding: 5px 8px; border-radius: 8px; white-space: nowrap; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.stop { background: var(--stop-soft); color: var(--stop); }
+  mark { background: #fff2a8; color: inherit; padding: 0 1px; }
+
+  /* Result screens: the whole top half is one solid colour + icon + word,
+     so the state is readable in sunlight and without relying on colour. */
+  .state { color: #fff; padding: 22px 16px 20px; flex: none; }
+  .state.ok { background: var(--ok); }
+  .state.stop { background: var(--stop); }
+  .state.warn { background: var(--warn); }
+  .state .icon { width: 64px; height: 64px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 40px; font-weight: 900; margin-bottom: 10px; }
+  .state.ok .icon { color: var(--ok); }
+  .state.stop .icon { color: var(--stop); }
+  .state.warn .icon { color: var(--warn); }
+  .state h3 { margin: 0; font-size: 30px; line-height: 1.1; letter-spacing: -0.01em; }
+  .state p { margin: 8px 0 0; font-size: 18px; line-height: 1.35; }
+  .who { font-size: 22px; font-weight: 800; margin: 0; }
+  .who-ar { font-size: 20px; font-weight: 700; margin: 2px 0 0; direction: rtl; text-align: left; unicode-bidi: plaintext; color: var(--ink-2); }
+  .meta { color: var(--ink-2); font-size: 15px; margin: 6px 0 12px; }
+  .give { border: 2px solid var(--line); border-radius: 12px; padding: 4px 12px; margin-bottom: 12px; }
+  .give div { display: flex; justify-content: space-between; padding: 9px 0; font-size: 18px; border-bottom: 1px solid #e5e9ee; }
+  .give div:last-child { border-bottom: 0; }
+  .give b { font-size: 20px; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 18px; margin: 4px 0 14px; }
+  .facts dt { color: var(--ink-2); }
+  .facts dd { margin: 0; font-weight: 800; }
+  .optional { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+
+  .notes { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+  .notes section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+  .notes h2 { margin: 0 0 8px; font-size: 1.1rem; }
+  .notes li { margin: 4px 0; line-height: 1.45; }
+  .notes table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  .notes th, .notes td { text-align: left; border-bottom: 1px solid var(--line); padding: 7px 8px; vertical-align: top; }
+  @media (max-width: 400px) { figure { width: 100%; } .phone { width: 100%; } }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>AidLedger: round set-up and pickup screens</h1>
+  <p><b>MR-08 (KAN-43)</b>. High-fidelity, mobile-first designs for review by Hadi. Every button is a link: click through the flow and the target screen is highlighted. Sample data is fake.</p>
+  <ul class="rules">
+    <li>Body text 17–18 px, titles 30 px</li>
+    <li>Result states: solid colour + icon + word (never colour alone)</li>
+    <li>Contrast ≥ 7:1 on all state colours</li>
+    <li>Main action = one big button at the bottom, thumb reach</li>
+    <li>Works at 360 px wide</li>
+  </ul>
+</header>
+
+<h2 class="flow-title">Coordinator · set up a round</h2>
+<div class="gallery">
+
+  <figure>
+    <div class="phone" id="setup">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#round">←</a><h2>New round <small>Draft · only coordinators can edit</small></h2></div>
+      <div class="body">
+        <label class="f">Round name<div class="in">Winter kits, December</div></label>
+        <div class="row2">
+          <label class="f">Date<div class="in">15 Dec 2026</div></label>
+          <label class="f">Location<div class="in">Tabbaneh hall</div></label>
+        </div>
+        <label class="f">Items per household
+          <div class="item"><div class="in">Food parcel</div><div class="in qty">1</div></div>
+          <div class="item"><div class="in">Blanket</div><div class="in qty">2</div></div>
+          <div class="item"><div class="in muted">+ Add item</div><div></div></div>
+        </label>
+        <label class="f">Who is eligible: areas
+          <div class="chips"><span class="chip on">Tripoli</span><span class="chip on">Mina</span><span class="chip">Beddawi</span><span class="chip">Qobbeh</span></div>
+        </label>
+        <div class="row2">
+          <label class="f">Min. household size<div class="in">3</div></label>
+          <label class="f">Must have flag<div class="in muted">Any</div></label>
+        </div>
+        <div class="note">Expected households: <b>214</b><br><small>Counted live from the rules above. Merged households count once.</small></div>
+      </div>
+      <div class="foot"><a class="btn primary" href="#round">Save draft</a></div>
+    </div>
+    <figcaption><b>1 · Create / edit round</b> Fields from MR-10. The expected count updates as rules change, so the coordinator sees the effect before opening the round (MR-11).</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="round">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#setup">←</a><h2>Winter kits, December <small>15 Dec · Tabbaneh hall</small></h2></div>
+      <div class="body">
+        <label class="f">Status
+          <div class="seg"><span>Draft</span><span class="on">Open</span><span>Closed</span></div>
+        </label>
+        <dl class="facts">
+          <dt>Expected</dt><dd>214 households</dd>
+          <dt>Collected</dt><dd>88 (41%)</dd>
+          <dt>Left</dt><dd>126</dd>
+        </dl>
+        <div class="meter"><i></i></div>
+        <p class="meta" style="margin-top:14px">Pickups are only accepted while the round is <b>Open</b>. Every status change is logged with who and when.</p>
+        <a class="btn ghost small" href="#setup">Edit round</a>
+      </div>
+      <div class="foot"><a class="btn ok" href="#scan">Start scanning</a></div>
+    </div>
+    <figcaption><b>2 · Round overview</b> Draft → Open → Closed as one control. "Start scanning" is the volunteers' entry point on distribution day.</figcaption>
+  </figure>
+</div>
+
+<h2 class="flow-title">Volunteer · distribution day</h2>
+<div class="gallery">
+
+  <figure>
+    <div class="phone" id="scan">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top" style="display:block">
+        <div class="progress"><span>Winter kits, December</span><span>88 / 214</span></div>
+        <div class="meter"><i></i></div>
+      </div>
+      <div class="cam">
+        <div class="hint">Point at the QR card</div>
+        <div class="frame"><i></i><i></i><i></i><i></i><div class="fakeqr"></div></div>
+        <a class="torch" href="#scan">🔦 Light</a>
+      </div>
+      <div class="foot">
+        <a class="btn ghost" href="#search">No card? Search instead</a>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+          <a class="btn small ok" href="#eligible">demo: ✓</a>
+          <a class="btn small" style="background:var(--stop);color:#fff" href="#collected">demo: ✗</a>
+          <a class="btn small" style="background:var(--warn);color:#fff" href="#noteligible">demo: !</a>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>3 · Scan</b> Camera stays open between families (opening it is slow on old phones, see MR-09). Light button for dim halls. The three "demo" buttons stand in for scan outcomes in this prototype only.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="search">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#scan">←</a><h2>Find household <small>Name, phone or card code</small></h2></div>
+      <div class="body">
+        <div class="in" style="border-color:var(--brand);margin-bottom:14px">khalil|</div>
+        <a class="result" href="#eligible"><div class="n">Mohammad <mark>Khalil</mark><span><bdi>محمد خليل</bdi> · Tripoli · <bdi>70 •• •• 12</bdi></span></div><span class="tag ok">Eligible</span></a>
+        <a class="result" href="#collected"><div class="n">Fatima <mark>Khalil</mark><span><bdi>فاطمة خليل</bdi> · Mina · <bdi>03 •• •• 85</bdi></span></div><span class="tag stop">Collected</span></a>
+        <a class="result" href="#noteligible"><div class="n">Ali <mark>Khalil</mark><span><bdi>علي خليل</bdi> · Beddawi · <bdi>71 •• •• 40</bdi></span></div><span class="tag" style="background:var(--warn-soft);color:var(--warn)">Not eligible</span></a>
+        <p class="meta">Arabic and Latin spellings both match. Phone numbers are partly hidden on screen.</p>
+      </div>
+    </div>
+    <figcaption><b>4 · Search fallback</b> For lost or damaged cards (MR-13). Each row already shows its status, so the volunteer knows before tapping. Must answer in under 1 s.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="eligible">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="state ok">
+        <div class="icon">✓</div>
+        <h3>Eligible</h3>
+        <p>Hand over the items below</p>
+      </div>
+      <div class="body">
+        <p class="who">Mohammad Khalil</p>
+        <p class="who-ar">محمد خليل</p>
+        <p class="meta">5 people · Tripoli · Card AL-7K3M-Q9TX</p>
+        <div class="give"><div><span>Food parcel</span><b>× 1</b></div><div><span>Blanket</span><b>× 2</b></div></div>
+        <label class="f">Collected by someone else? <span class="optional">(optional)</span><div class="in muted">Name of person collecting</div></label>
+      </div>
+      <div class="foot"><a class="btn ok" href="#scan">✓ Confirm handed over</a></div>
+    </div>
+    <figcaption><b>5 · Eligible</b> Green, tick, the word "Eligible". Items to hand over in large type. Proxy pickup field (MR-14). One tap records it and goes straight back to the camera.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="collected">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="state stop">
+        <div class="icon">✕</div>
+        <h3>Already collected</h3>
+        <p>Do not hand over items</p>
+      </div>
+      <div class="body">
+        <p class="who">Fatima Khalil</p>
+        <p class="who-ar">فاطمة خليل</p>
+        <dl class="facts">
+          <dt>When</dt><dd>Today, 10:42</dd>
+          <dt>By</dt><dd>Volunteer Rami</dd>
+          <dt>Where</dt><dd>Table 2</dd>
+          <dt>Collected by</dt><dd>Herself</dd>
+        </dl>
+        <p class="meta">If this was a mistake, ask the coordinator. Only a coordinator can cancel a pickup (MR-16).</p>
+      </div>
+      <div class="foot"><a class="btn ghost" href="#scan">Next family</a></div>
+    </div>
+    <figcaption><b>6 · Already collected</b> Red, cross, "Already collected" + "Do not hand over items". Shows when, which volunteer and which table, from the 409 response (MR-12). No confirm button exists on this screen.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="noteligible">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="state warn">
+        <div class="icon">!</div>
+        <h3>Not eligible for this round</h3>
+        <p>Do not hand over items</p>
+      </div>
+      <div class="body">
+        <p class="who">Ali Khalil</p>
+        <p class="who-ar">علي خليل</p>
+        <dl class="facts">
+          <dt>Reason</dt><dd>Area Beddawi is not in this round</dd>
+        </dl>
+        <p class="meta">Other reasons shown here: card not found, household was merged into another record, round is closed.</p>
+      </div>
+      <div class="foot">
+        <a class="btn ghost" href="#search">Search again</a>
+        <a class="btn ghost small" href="#scan">Next family</a>
+      </div>
+    </div>
+    <figcaption><b>7 · Not eligible / not found</b> Dark orange, "!" so it can't be confused with the red "already collected". States the exact reason in plain words.</figcaption>
+  </figure>
+</div>
+
+<div class="notes">
+  <section>
+    <h2>Messages (proposed wording)</h2>
+    <table>
+      <tr><th>Case</th><th>Headline</th><th>Second line</th></tr>
+      <tr><td>Eligible</td><td>Eligible</td><td>Hand over the items below</td></tr>
+      <tr><td>Second pickup (409)</td><td>Already collected</td><td>Do not hand over items</td></tr>
+      <tr><td>Area / size / flag rule fails</td><td>Not eligible for this round</td><td>Reason: <i>the specific rule</i></td></tr>
+      <tr><td>Unknown card</td><td>Card not found</td><td>Search by name or phone instead</td></tr>
+      <tr><td>Merged household</td><td>This card was replaced</td><td>Search for the household's current record</td></tr>
+      <tr><td>Round not Open</td><td>Round is not open</td><td>Ask the coordinator to open it</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Open questions for Hadi</h2>
+    <ul>
+      <li>Do we need an Arabic UI, or only Arabic household names next to Latin ones (as shown)?</li>
+      <li>"Where / Table 2": do we record a distribution point per volunteer session? If not, drop that row.</li>
+      <li>Should "Confirm" need a second tap (hold or double-confirm), or is one tap enough given coordinators can void?</li>
+      <li>Expected count on screen 1: live while editing, or only after saving?</li>
+    </ul>
+  </section>
+</div>
+
+</body>
+</html>

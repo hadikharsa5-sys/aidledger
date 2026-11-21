@@ -1,0 +1,21 @@
+{
+  "name": "mr-09-qr-scan-spike",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "MR-09 spike: compare browser QR scanners on low-end Android phones",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "html5-qrcode": "^2.3.8",
+    "qr-scanner": "^1.4.2",
+    "qrcode": "^1.5.4"
+  }
+}
