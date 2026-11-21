@@ -1,0 +1,222 @@
+// AidLedger data model (HK-11), following the model list in MVP Plan section 7:
+// Organisation, User, Household, Member, Consent, DuplicateCandidate, Round,
+// RoundItem, Pickup, AuditLog.
+// Every change goes through a reviewed PR.
+// After editing: `npm run db:migrate -- --name what-changed`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN // manages users (HK-14)
+  MANAGER // NGO manager: sees reports, reviews duplicates
+  COORDINATOR // runs rounds, reviews duplicates, voids pickups
+  VOLUNTEER // registers households, records pickups
+}
+
+enum HouseholdStatus {
+  ACTIVE
+  MERGED // merged into another household; see mergedIntoId
+  INACTIVE
+}
+
+enum VulnerabilityFlag {
+  ELDERLY
+  DISABILITY
+  SINGLE_PARENT
+  CHRONIC_ILLNESS
+  DISPLACED
+  LARGE_FAMILY
+  OTHER
+}
+
+enum DuplicateStatus {
+  OPEN
+  MERGED
+  DISMISSED
+}
+
+enum RoundStatus {
+  DRAFT
+  OPEN // pickups are only accepted while a round is OPEN
+  CLOSED
+}
+
+model Organisation {
+  id         String      @id @default(cuid())
+  name       String
+  createdAt  DateTime    @default(now())
+  users      User[]
+  households Household[]
+  rounds     Round[]
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  organisationId     String
+  organisation       Organisation         @relation(fields: [organisationId], references: [id])
+  name               String
+  email              String               @unique
+  passwordHash       String
+  role               Role                 @default(VOLUNTEER)
+  active             Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  registered         Household[]          @relation("RegisteredBy")
+  consentsRecorded   Consent[]
+  duplicatesReviewed DuplicateCandidate[]
+  roundsCreated      Round[]
+  pickups            Pickup[]             @relation("PickupVolunteer")
+  pickupsVoided      Pickup[]             @relation("PickupVoidedBy")
+  auditLogs          AuditLog[]
+}
+
+model Household {
+  id                 String              @id @default(cuid())
+  organisationId     String
+  organisation       Organisation        @relation(fields: [organisationId], references: [id])
+  code               String              @unique // opaque code printed on the QR card; never personal data (AH-11)
+  headName           String // as typed, Arabic or Latin
+  headNameNormalized String // filled on save by the normalisation module (AH-07), used for matching
+  phone              String? // as typed
+  phoneNormalized    String? // +961XXXXXXXX, used for matching
+  area               String
+  address            String?
+  vulnerabilityFlags VulnerabilityFlag[]
+  status             HouseholdStatus     @default(ACTIVE)
+  mergedIntoId       String?
+  mergedInto         Household?          @relation("MergedInto", fields: [mergedIntoId], references: [id])
+  mergedFrom         Household[]         @relation("MergedInto")
+  registeredById     String
+  registeredBy       User                @relation("RegisteredBy", fields: [registeredById], references: [id])
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  members            Member[]
+  consents           Consent[]
+  pickups            Pickup[]
+  duplicatesAsA      DuplicateCandidate[] @relation("DuplicateA")
+  duplicatesAsB      DuplicateCandidate[] @relation("DuplicateB")
+
+  // Trigram index for fuzzy name matching (needs the pg_trgm extension, enabled in the first migration).
+  @@index([headNameNormalized(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([phoneNormalized])
+  @@index([organisationId, area])
+}
+
+model Member {
+  id          String    @id @default(cuid())
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  name        String
+  birthYear   Int?
+  relation    String // head, spouse, child, parent, other
+}
+
+// No household without consent (AH-10). Kept as its own record so we know who
+// recorded it, which consent text was shown, and whether it was withdrawn.
+model Consent {
+  id           String    @id @default(cuid())
+  householdId  String
+  household    Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  textVersion  String // which version of the consent text was read out
+  givenAt      DateTime  @default(now())
+  recordedById String
+  recordedBy   User      @relation(fields: [recordedById], references: [id])
+  withdrawnAt  DateTime?
+
+  @@index([householdId])
+}
+
+model DuplicateCandidate {
+  id           String          @id @default(cuid())
+  householdAId String
+  householdA   Household       @relation("DuplicateA", fields: [householdAId], references: [id])
+  householdBId String
+  householdB   Household       @relation("DuplicateB", fields: [householdBId], references: [id])
+  score        Float
+  reasons      Json // which signals matched: name, phone, area
+  status       DuplicateStatus @default(OPEN)
+  reviewedById String?
+  reviewedBy   User?           @relation(fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@unique([householdAId, householdBId])
+  @@index([status])
+}
+
+model Round {
+  id             String       @id @default(cuid())
+  organisationId String
+  organisation   Organisation @relation(fields: [organisationId], references: [id])
+  name           String
+  date           DateTime
+  location       String
+  status         RoundStatus  @default(DRAFT)
+  eligibility    Json // { areas?: string[], flags?: VulnerabilityFlag[] (any of), minHouseholdSize?: number }
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+  createdAt      DateTime     @default(now())
+  items          RoundItem[]
+  pickups        Pickup[]
+
+  @@index([organisationId, status])
+}
+
+model RoundItem {
+  id                   String @id @default(cuid())
+  roundId              String
+  round                Round  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  name                 String
+  quantityPerHousehold Int
+}
+
+model Pickup {
+  id            String    @id @default(cuid())
+  roundId       String
+  round         Round     @relation(fields: [roundId], references: [id])
+  householdId   String
+  household     Household @relation(fields: [householdId], references: [id])
+  volunteerId   String
+  volunteer     User      @relation("PickupVolunteer", fields: [volunteerId], references: [id])
+  itemsGiven    Json // snapshot of the round's items at pickup time
+  point         String? // distribution table / point
+  // Proxy pickup (MR-14): when a relative or neighbour collects. All null = the household itself.
+  proxyName     String?
+  proxyRelation String?
+  proxyIdOrNote String?
+  recordedAt    DateTime  @default(now()) // when it happened; can be earlier than createdAt for offline sync (MR-19)
+  createdAt     DateTime  @default(now()) // when the server stored it
+  // Void (MR-16): a coordinator cancels a pickup recorded in error.
+  voidedAt      DateTime?
+  voidedById    String?
+  voidedBy      User?     @relation("PickupVoidedBy", fields: [voidedById], references: [id])
+  voidReason    String?
+
+  // One pickup per household per round is enforced by a PARTIAL unique index,
+  // hand-written in prisma/migrations/*_init/migration.sql:
+  //   UNIQUE ("roundId", "householdId") WHERE "voidedAt" IS NULL
+  // Prisma's schema language can't express partial indexes. Voided pickups
+  // don't count, so a household can collect again after a void.
+  // Do not replace it with @@unique([roundId, householdId]).
+  @@index([roundId, householdId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String // e.g. HOUSEHOLD_CREATED, MERGE, PICKUP_RECORDED, PICKUP_VOIDED, ROLE_CHANGED
+  entity    String
+  entityId  String
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
