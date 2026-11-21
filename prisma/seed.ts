@@ -51,6 +51,11 @@ async function seedHouseholds(organisationId: string, registrarIds: string[]) {
   // Generated before anything is deleted, so a bad value leaves the database untouched.
   const households = generateHouseholds({ count });
 
+  // Ids are derived from the card code so they are stable between runs.
+  const rows = households.map((h, i) => ({ ...h, id: `seed_${h.code}`, registeredById: registrarIds[i % registrarIds.length] }));
+
+  // Delete and recreate in ONE transaction: either the demo households are
+  // fully replaced, or nothing changes (no empty demo org if a create fails).
   const existing = { organisationId };
   await prisma.$transaction([
     prisma.pickup.deleteMany({ where: { household: existing } }),
@@ -59,12 +64,7 @@ async function seedHouseholds(organisationId: string, registrarIds: string[]) {
     }),
     prisma.household.updateMany({ where: existing, data: { mergedIntoId: null } }),
     prisma.household.deleteMany({ where: existing }), // members and consents cascade
-  ]);
 
-  // Ids are derived from the card code so they are stable between runs.
-  const rows = households.map((h, i) => ({ ...h, id: `seed_${h.code}`, registeredById: registrarIds[i % registrarIds.length] }));
-
-  await prisma.$transaction([
     prisma.household.createMany({
       data: rows.map((h) => ({
         id: h.id,
