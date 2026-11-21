@@ -1,6 +1,6 @@
 // MH-07: checks on the synthetic household generator. No database needed.
 import { describe, expect, it } from "vitest";
-import { generateHouseholds, normalizeLebanesePhone } from "@/prisma/seed-data/HouseHolds";
+import { generateHouseholds, normalizeLebanesePhone } from "@/prisma/seed-data/households";
 
 const households = generateHouseholds();
 const isArabic = (s: string) => /[؀-ۿ]/.test(s);

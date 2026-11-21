@@ -12,7 +12,7 @@ import {
   MALE_FIRST_NAMES,
   MOBILE_PREFIXES,
   type NameEntry,
-} from "./Names";
+} from "./names";
 
 export type Script = "ar" | "latin";
 

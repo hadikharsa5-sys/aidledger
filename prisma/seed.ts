@@ -5,7 +5,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import type { Role } from "../generated/prisma/client";
 import { createPrismaClient } from "../lib/db";
-import { generateHouseholds } from "./seed-data/HouseHolds";
+import { generateHouseholds } from "./seed-data/households";
 
 const prisma = createPrismaClient();
 
