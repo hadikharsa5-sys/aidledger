@@ -73,7 +73,7 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
 3. Commit your work and push the branch: `git push -u origin KAN-12-beneficiary-form`
 4. Open a Pull Request into `main` on GitHub and fill in the template.
 5. Automatic checks run: **CI** (lint, typecheck, tests and build against a Postgres service), a **Netlify deploy preview** and a **Claude code review** that comments on the PR.
-6. At least **one teammate must approve** the PR, and CI must pass, before it can be merged.
+6. Hadi (code owner, `.github/CODEOWNERS`) must approve the PR, and CI must pass, before it can be merged.
 7. Address review comments by pushing more commits to the same branch. Merge with "Squash and merge".
 
 ## Environments
