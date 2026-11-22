@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MR-09 offline storage test</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Offline test <small>MR-09</small></h1>
+      <a href="/">← Scan test</a>
+    </header>
+
+    <section class="panel">
+      <label>Phone
+        <input id="phone" placeholder="e.g. Samsung A10, Android 9" autocomplete="off" />
+      </label>
+      <h2>This phone right now</h2>
+      <div id="status"></div>
+      <p class="hint" id="loadedFrom"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Steps</h2>
+      <ol class="steps">
+        <li>
+          <b>Turn on the offline cache.</b> Saves this page on the phone so it opens without signal.
+          <button id="swBtn" class="primary">1 · Turn on offline cache</button>
+        </li>
+        <li>
+          <b>Save 50 test pickups</b> in the phone's database (IndexedDB), like a volunteer would offline.
+          <button id="saveBtn" class="primary">2 · Save 50 test pickups</button>
+        </li>
+        <li>
+          <b>Lock the phone for 5 minutes</b>, unlock it, come back to this tab.
+          <button id="afterLockBtn">3 · Check after lock</button>
+        </li>
+        <li>
+          <b>Turn on airplane mode</b>, then <b>reload this page</b> (pull down or ⟳). It should still open and show your 50 pickups.
+          <button id="afterOfflineBtn">4 · Check while offline</button>
+        </li>
+        <li>
+          <b>Close Chrome completely</b> (swipe it away), still in airplane mode, reopen it and open this page again.
+          <button id="afterRestartBtn">5 · Check after Chrome restart</button>
+        </li>
+        <li>
+          Turn airplane mode off, then send the results.
+          <button id="sendBtn" class="primary">6 · Send to laptop</button>
+        </li>
+      </ol>
+      <details>
+        <summary>Optional: ask Chrome not to delete this data</summary>
+        <p class="hint">Chrome may clear site data when the phone is low on space. This asks it to keep ours. Note whether it was granted.</p>
+        <button id="persistBtn">Ask to keep data</button>
+      </details>
+    </section>
+
+    <section class="panel">
+      <h2>Results on this phone</h2>
+      <div id="log"></div>
+      <div class="row buttons">
+        <button id="downloadBtn">Download CSV</button>
+        <button id="resetBtn" class="danger">Delete test data</button>
+      </div>
+    </section>
+
+    <script type="module" src="/src/offline.js"></script>
+  </body>
+</html>
