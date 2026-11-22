@@ -5,6 +5,7 @@
 // get identical data and the MH-08 label file stays valid.
 
 import type { VulnerabilityFlag } from "../../generated/prisma/client";
+import { normalizeName, normalizePhone } from "../../lib/normalize";
 import {
   AREAS,
   FAMILY_NAMES,
@@ -70,29 +71,6 @@ function weightedPick(rng: Rng, items: { name: string; weight: number }[]): stri
     if (r < 0) return item.name;
   }
   return items[items.length - 1].name;
-}
-
-// --- Normalisation placeholder ----------------------------------------------
-
-// TEMPORARY: the real normaliser is AH-07 (Ahmad). Until it is merged, the seed
-// fills headNameNormalized with this basic version. Swap the import once
-// lib/normalize exists so seeded data matches what registration produces.
-export function basicNormalizeName(name: string): string {
-  return name
-    .normalize("NFKC")
-    .replace(/[ً-ْـ]/g, "") // Arabic diacritics and tatweel
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Any typed Lebanese mobile -> +961XXXXXXXX (leading 0 of "03" dropped).
-export function normalizeLebanesePhone(phone: string): string {
-  let digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("00961")) digits = digits.slice(5);
-  else if (digits.startsWith("961")) digits = digits.slice(3);
-  if (digits.startsWith("0")) digits = digits.slice(1);
-  return `+961${digits}`;
 }
 
 // --- Pieces of a household --------------------------------------------------
@@ -223,7 +201,7 @@ export function generateHouseholds({ count = 500, seed = DEFAULT_SEED }: Generat
       do {
         prefix = pick(rng, MOBILE_PREFIXES);
         rest = String(int(rng, 100000, 999999));
-        normalized = normalizeLebanesePhone(prefix + rest);
+        normalized = normalizePhone(prefix + rest)!;
       } while (usedPhones.has(normalized));
       usedPhones.add(normalized);
       phone = formatPhone(rng, prefix, rest);
@@ -242,7 +220,7 @@ export function generateHouseholds({ count = 500, seed = DEFAULT_SEED }: Generat
     households.push({
       code,
       headName,
-      headNameNormalized: basicNormalizeName(headName),
+      headNameNormalized: normalizeName(headName),
       phone,
       phoneNormalized,
       area: weightedPick(rng, AREAS),
