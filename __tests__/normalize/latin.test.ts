@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collapseSpaces, dropLatinArticle, normalizeLatin } from "@/lib/normalize";
+import { collapseSpaces, dropLatinArticle, normalizeLatin, stripAccents } from "@/lib/normalize";
 
 describe("Latin: lower-case and trim", () => {
   it("lower-cases", () => {
@@ -13,6 +13,10 @@ describe("Latin: lower-case and trim", () => {
   });
   it("treats hyphens as spaces", () => {
     expect(normalizeLatin("Al-Masri")).toBe("al masri");
+  });
+  it("strips accents", () => {
+    expect(normalizeLatin("Élie Hélou")).toBe("elie helou");
+    expect(normalizeLatin("François Çelik")).toBe("francois celik");
   });
   it("handles empty and blank input", () => {
     expect(normalizeLatin("")).toBe("");
@@ -34,5 +38,11 @@ describe("Latin: drop el/al article", () => {
   });
   it("does not touch words that only start with al/el", () => {
     expect(dropLatinArticle("ali elie")).toBe("ali elie");
+  });
+});
+
+describe("Latin: strip accents", () => {
+  it("leaves Arabic letters with a hamza intact", () => {
+    expect(stripAccents("مؤمن سائد")).toBe("مؤمن سائد");
   });
 });

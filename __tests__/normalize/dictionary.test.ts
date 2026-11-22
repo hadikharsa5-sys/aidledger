@@ -66,8 +66,14 @@ describe("normalizeName: full pipeline", () => {
     expect(normalizeName("أَحْمَـد عيسى")).toBe(normalizeName("احمد عيسي"));
   });
 
+  it("ignores accents and the Arabic article", () => {
+    expect(normalizeName("Élie Hélou")).toBe(normalizeName("Elie Helou"));
+    expect(normalizeName("مُحَمَّد المصري")).toBe(normalizeName("محمد مصري"));
+  });
+
   it("keeps different people different", () => {
     expect(normalizeName("Ali Haddad")).not.toBe(normalizeName("Hassan Haddad"));
+    expect(normalizeName("Hajar Khoury")).not.toBe(normalizeName("Hajjar Khoury"));
   });
 
   it("is idempotent", () => {

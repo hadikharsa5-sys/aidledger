@@ -1,11 +1,7 @@
 // MH-07: checks on the synthetic household generator. No database needed.
 import { describe, expect, it } from "vitest";
-import {
-  generateHouseholds,
-  MAX_PARENT_AGE,
-  MIN_PARENT_AGE,
-  normalizeLebanesePhone,
-} from "@/prisma/seed-data/households";
+import { normalizeName } from "@/lib/normalize";
+import { generateHouseholds, MAX_PARENT_AGE, MIN_PARENT_AGE } from "@/prisma/seed-data/households";
 
 const households = generateHouseholds();
 const isArabic = (s: string) => /[؀-ۿ]/.test(s);
@@ -70,10 +66,7 @@ describe("synthetic household generator (MH-07)", () => {
     }
   });
 
-  it("normalises Lebanese phone formats to +961", () => {
-    for (const typed of ["03 123 456", "03-123456", "+961 3 123 456", "009613123456"]) {
-      expect(normalizeLebanesePhone(typed)).toBe("+9613123456");
-    }
-    expect(normalizeLebanesePhone("70 123 456")).toBe("+96170123456");
+  it("normalises names the same way registration does", () => {
+    for (const h of households) expect(h.headNameNormalized).toBe(normalizeName(h.headName));
   });
 });

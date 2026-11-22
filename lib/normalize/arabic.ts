@@ -43,3 +43,12 @@ export function normalizeArabic(s: string): string {
   out = tehMarbutaToHeh(out);
   return out;
 }
+
+// "محمد المصري" and "محمد مصري" are the same family name. The first word is
+// kept as typed, and "الله" (as in "عبد الله") is never cut.
+export function dropArabicArticle(s: string): string {
+  return s
+    .split(" ")
+    .map((word, i) => (i > 0 && word.startsWith("ال") && word.length > 3 && word !== "الله" ? word.slice(2) : word))
+    .join(" ");
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   alefMaqsuraToYeh,
+  dropArabicArticle,
   normalizeArabic,
   removeDiacritics,
   removeTatweel,
@@ -52,6 +53,24 @@ describe("Arabic: ى -> ي", () => {
 describe("Arabic: ة -> ه", () => {
   it("turns teh marbuta into heh", () => {
     expect(tehMarbutaToHeh("فاطمة")).toBe("فاطمه");
+  });
+});
+
+describe("Arabic: drop ال on words after the first", () => {
+  it.each([
+    ["محمد المصري", "محمد مصري"],
+    ["احمد الحلبي الايوبي", "احمد حلبي ايوبي"],
+  ])("%s -> %s", (input, expected) => {
+    expect(dropArabicArticle(input)).toBe(expected);
+  });
+  it("keeps the first word as typed", () => {
+    expect(dropArabicArticle("الياس حداد")).toBe("الياس حداد");
+  });
+  it("keeps الله", () => {
+    expect(dropArabicArticle("عبد الله")).toBe("عبد الله");
+  });
+  it("does not leave a word shorter than two letters", () => {
+    expect(dropArabicArticle("علي الي")).toBe("علي الي");
   });
 });
 
