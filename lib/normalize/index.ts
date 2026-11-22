@@ -1,4 +1,4 @@
-import { normalizeArabic } from "./arabic";
+import { dropArabicArticle, normalizeArabic } from "./arabic";
 import { dropLatinArticle, normalizeLatin } from "./latin";
 import { applyDictionary } from "./dictionary";
 
@@ -8,5 +8,5 @@ export * from "./dictionary";
 export * from "./phone";
 
 export function normalizeName(input: string): string {
-  return applyDictionary(dropLatinArticle(normalizeLatin(normalizeArabic(input))));
+  return applyDictionary(dropArabicArticle(dropLatinArticle(normalizeLatin(normalizeArabic(input)))));
 }
