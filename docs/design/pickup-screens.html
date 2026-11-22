@@ -123,6 +123,21 @@
   .facts dd { margin: 0; font-weight: 800; }
   .optional { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 
+  /* Sync banner: always under the status bar on volunteer screens */
+  .sync { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px; font-size: 15px; font-weight: 800; flex: none; }
+  .sync.online { background: var(--ok-soft); color: var(--ok); }
+  .sync.offline { background: #f5b400; color: var(--ink); }
+  .sync small { font-weight: 600; font-size: 13px; }
+  .state.pending { background: var(--brand); }
+  .state.pending .icon { color: var(--brand); }
+  .lookup { border: 3px solid var(--brand); border-radius: 12px; padding: 14px; font-size: 19px; color: #6b7480; margin-bottom: 10px; }
+  .btn.scan { background: #1d232a; color: #fff; }
+  .toggle { display: flex; justify-content: space-between; align-items: center; border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 17px; font-weight: 700; text-decoration: none; color: var(--ink); }
+  .toggle i { width: 46px; height: 28px; border-radius: 99px; background: var(--line); position: relative; flex: none; }
+  .toggle i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; }
+  .toggle.on i { background: var(--brand); }
+  .toggle.on i::after { left: 21px; }
+
   .notes { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
   .notes section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
   .notes h2 { margin: 0 0 8px; font-size: 1.1rem; }
@@ -137,12 +152,15 @@
 <header class="page-head">
   <h1>AidLedger: round set-up and pickup screens</h1>
   <p><b>MR-08 (KAN-43)</b>. High-fidelity, mobile-first designs for review by Hadi. Every button is a link: click through the flow and the target screen is highlighted. Sample data is fake.</p>
+  <p>Updated after the NGO survey: search is the main way to find a family and QR scan is a shortcut, proxy pickups record who collected, and volunteers always see whether the phone is online and what is still waiting to sync.</p>
   <ul class="rules">
     <li>Body text 17–18 px, titles 30 px</li>
     <li>Result states: solid colour + icon + word (never colour alone)</li>
     <li>Contrast ≥ 7:1 on all state colours</li>
     <li>Main action = one big button at the bottom, thumb reach</li>
     <li>Works at 360 px wide</li>
+    <li>Search first, scan one tap away</li>
+    <li>Online / offline always visible</li>
   </ul>
 </header>
 
@@ -195,9 +213,9 @@
         <p class="meta" style="margin-top:14px">Pickups are only accepted while the round is <b>Open</b>. Every status change is logged with who and when.</p>
         <a class="btn ghost small" href="#setup">Edit round</a>
       </div>
-      <div class="foot"><a class="btn ok" href="#scan">Start scanning</a></div>
+      <div class="foot"><a class="btn ok" href="#find">Start distribution</a></div>
     </div>
-    <figcaption><b>2 · Round overview</b> Draft → Open → Closed as one control. "Start scanning" is the volunteers' entry point on distribution day.</figcaption>
+    <figcaption><b>2 · Round overview</b> Draft → Open → Closed as one control. "Start distribution" is the volunteers' entry point on distribution day.</figcaption>
   </figure>
 </div>
 
@@ -205,19 +223,35 @@
 <div class="gallery">
 
   <figure>
-    <div class="phone" id="scan">
+    <div class="phone" id="find">
       <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
       <div class="top" style="display:block">
         <div class="progress"><span>Winter kits, December</span><span>88 / 214</span></div>
         <div class="meter"><i></i></div>
       </div>
+      <div class="body">
+        <a class="lookup" href="#search" style="display:block;text-decoration:none">🔍 Name, phone or household code</a>
+        <p class="meta">Arabic or Latin spelling. Mohamad, Mhmd and <bdi>محمد</bdi> all find the same family.</p>
+        <a class="btn scan" href="#scan">▣ Scan QR card</a>
+        <p class="meta" style="margin-top:14px">Last pickup: Mohammad Khalil, 10:51</p>
+      </div>
+    </div>
+    <figcaption><b>3 · Find household</b> The volunteer's home screen. Search is the main entry point (MR-13); families with a card skip typing with one tap on "Scan QR card".</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="scan">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
+      <div class="top"><a class="back" href="#find">←</a><h2>Scan QR card <small>Winter kits, December · 88 / 214</small></h2></div>
       <div class="cam">
         <div class="hint">Point at the QR card</div>
         <div class="frame"><i></i><i></i><i></i><i></i><div class="fakeqr"></div></div>
         <a class="torch" href="#scan">🔦 Light</a>
       </div>
       <div class="foot">
-        <a class="btn ghost" href="#search">No card? Search instead</a>
+        <a class="btn ghost" href="#find">No card? Search instead</a>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
           <a class="btn small ok" href="#eligible">demo: ✓</a>
           <a class="btn small" style="background:var(--stop);color:#fff" href="#collected">demo: ✗</a>
@@ -225,13 +259,14 @@
         </div>
       </div>
     </div>
-    <figcaption><b>3 · Scan</b> Camera stays open between families (opening it is slow on old phones, see MR-09). Light button for dim halls. The three "demo" buttons stand in for scan outcomes in this prototype only.</figcaption>
+    <figcaption><b>4 · Scan (shortcut)</b> Camera stays open between families (opening it is slow on old phones, see MR-09). Light button for dim halls. The three "demo" buttons stand in for scan outcomes in this prototype only.</figcaption>
   </figure>
 
   <figure>
     <div class="phone" id="search">
       <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
-      <div class="top"><a class="back" href="#scan">←</a><h2>Find household <small>Name, phone or card code</small></h2></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
+      <div class="top"><a class="back" href="#find">←</a><h2>Find household <small>Name, phone or card code</small></h2></div>
       <div class="body">
         <div class="in" style="border-color:var(--brand);margin-bottom:14px">khalil|</div>
         <a class="result" href="#eligible"><div class="n">Mohammad <mark>Khalil</mark><span><bdi>محمد خليل</bdi> · Tripoli · <bdi>70 •• •• 12</bdi></span></div><span class="tag ok">Eligible</span></a>
@@ -240,12 +275,13 @@
         <p class="meta">Arabic and Latin spellings both match. Phone numbers are partly hidden on screen.</p>
       </div>
     </div>
-    <figcaption><b>4 · Search fallback</b> For lost or damaged cards (MR-13). Each row already shows its status, so the volunteer knows before tapping. Must answer in under 1 s.</figcaption>
+    <figcaption><b>5 · Search results</b> Most families arrive without their card, so this is the usual path (MR-13). Each row already shows its status, so the volunteer knows before tapping. Must answer in under 1 s.</figcaption>
   </figure>
 
   <figure>
     <div class="phone" id="eligible">
       <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
       <div class="state ok">
         <div class="icon">✓</div>
         <h3>Eligible</h3>
@@ -256,16 +292,36 @@
         <p class="who-ar">محمد خليل</p>
         <p class="meta">5 people · Tripoli · Card AL-7K3M-Q9TX</p>
         <div class="give"><div><span>Food parcel</span><b>× 1</b></div><div><span>Blanket</span><b>× 2</b></div></div>
-        <label class="f">Collected by someone else? <span class="optional">(optional)</span><div class="in muted">Name of person collecting</div></label>
+        <a class="toggle" href="#proxy">Someone else is collecting<i></i></a>
       </div>
-      <div class="foot"><a class="btn ok" href="#scan">✓ Confirm handed over</a></div>
+      <div class="foot"><a class="btn ok" href="#find">✓ Confirm handed over</a></div>
     </div>
-    <figcaption><b>5 · Eligible</b> Green, tick, the word "Eligible". Items to hand over in large type. Proxy pickup field (MR-14). One tap records it and goes straight back to the camera.</figcaption>
+    <figcaption><b>6 · Eligible</b> Green, tick, the word "Eligible". Items to hand over in large type. One tap records it and goes back to Find household. The switch opens the proxy fields.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="proxy">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
+      <div class="top"><a class="back" href="#eligible">←</a><h2>Proxy pickup <small>Mohammad Khalil · Eligible</small></h2></div>
+      <div class="body">
+        <a class="toggle on" href="#eligible">Someone else is collecting<i></i></a>
+        <label class="f" style="margin-top:14px">Name of person collecting<div class="in">Karim Khalil</div></label>
+        <label class="f">Relation to household
+          <div class="chips"><span class="chip">Spouse</span><span class="chip on">Son / daughter</span><span class="chip">Parent</span><span class="chip">Sibling</span><span class="chip">Neighbour</span><span class="chip">Other</span></div>
+        </label>
+        <label class="f">ID number <span class="optional">(or a note below)</span><div class="in">000482</div></label>
+        <label class="f">Note <span class="optional">(if no ID)</span><div class="in muted">e.g. known to the coordinator</div></label>
+      </div>
+      <div class="foot"><a class="btn ok" href="#find">✓ Confirm handed over</a></div>
+    </div>
+    <figcaption><b>7 · Proxy pickup</b> When a relative or neighbour collects (MR-14): name, relation, and an ID number or a note. Confirm stays disabled until name, relation and one of ID or note are filled. Shown later in the receipt and audit logs.</figcaption>
   </figure>
 
   <figure>
     <div class="phone" id="collected">
       <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
       <div class="state stop">
         <div class="icon">✕</div>
         <h3>Already collected</h3>
@@ -278,18 +334,19 @@
           <dt>When</dt><dd>Today, 10:42</dd>
           <dt>By</dt><dd>Volunteer Rami</dd>
           <dt>Where</dt><dd>Table 2</dd>
-          <dt>Collected by</dt><dd>Herself</dd>
+          <dt>Collected by</dt><dd>Her son, Karim (proxy)</dd>
         </dl>
         <p class="meta">If this was a mistake, ask the coordinator. Only a coordinator can cancel a pickup (MR-16).</p>
       </div>
-      <div class="foot"><a class="btn ghost" href="#scan">Next family</a></div>
+      <div class="foot"><a class="btn ghost" href="#find">Next family</a></div>
     </div>
-    <figcaption><b>6 · Already collected</b> Red, cross, "Already collected" + "Do not hand over items". Shows when, which volunteer and which table, from the 409 response (MR-12). No confirm button exists on this screen.</figcaption>
+    <figcaption><b>8 · Already collected</b> Red, cross, "Already collected" + "Do not hand over items". Shows when, which volunteer and which table, from the 409 response (MR-12). Proxy pickups show who collected. No confirm button exists on this screen.</figcaption>
   </figure>
 
   <figure>
     <div class="phone" id="noteligible">
       <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Online</span><small>All pickups synced</small></div>
       <div class="state warn">
         <div class="icon">!</div>
         <h3>Not eligible for this round</h3>
@@ -305,10 +362,70 @@
       </div>
       <div class="foot">
         <a class="btn ghost" href="#search">Search again</a>
-        <a class="btn ghost small" href="#scan">Next family</a>
+        <a class="btn ghost small" href="#find">Next family</a>
       </div>
     </div>
-    <figcaption><b>7 · Not eligible / not found</b> Dark orange, "!" so it can't be confused with the red "already collected". States the exact reason in plain words.</figcaption>
+    <figcaption><b>9 · Not eligible / not found</b> Dark orange, "!" so it can't be confused with the red "already collected". States the exact reason in plain words.</figcaption>
+  </figure>
+</div>
+
+<h2 class="flow-title">Volunteer · weak or no signal</h2>
+<div class="gallery">
+
+  <figure>
+    <div class="phone" id="offline-find">
+      <div class="bar"><span>9:41</span><span>✕ No signal</span></div>
+      <div class="sync offline"><span>⚠ Offline</span><small>3 pickups not yet synced</small></div>
+      <div class="top" style="display:block">
+        <div class="progress"><span>Winter kits, December</span><span>91 / 214</span></div>
+        <div class="meter"><i style="width:43%"></i></div>
+      </div>
+      <div class="body">
+        <a class="lookup" href="#offline-saved" style="display:block;text-decoration:none">🔍 Name, phone or household code</a>
+        <p class="meta">Searching the list saved on this phone (updated 10:30). Pickups made on other phones since then are not shown until signal returns.</p>
+        <a class="btn scan" href="#offline-saved">▣ Scan QR card</a>
+      </div>
+      <div class="foot"><a class="btn ghost small" href="#synced">demo: signal returns</a></div>
+    </div>
+    <figcaption><b>10 · Offline</b> Yellow banner with a warning sign, on every volunteer screen while offline, with the number of pickups still on the phone (HK-23). Search and scan keep working from the saved list.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="offline-saved">
+      <div class="bar"><span>9:41</span><span>✕ No signal</span></div>
+      <div class="sync offline"><span>⚠ Offline</span><small>4 pickups not yet synced</small></div>
+      <div class="state pending">
+        <div class="icon">↻</div>
+        <h3>Saved offline</h3>
+        <p>Not yet confirmed. It will sync when signal returns.</p>
+      </div>
+      <div class="body">
+        <p class="who">Rania Haddad</p>
+        <p class="who-ar">رانيا حداد</p>
+        <p class="meta">4 people · Mina · 10:58 on this phone</p>
+        <div class="give"><div><span>Food parcel</span><b>× 1</b></div><div><span>Blanket</span><b>× 2</b></div></div>
+        <p class="meta">If this family already collected on another phone, the coordinator is told after sync. Nothing is lost if the app is closed.</p>
+      </div>
+      <div class="foot"><a class="btn ghost" href="#offline-find">Next family</a></div>
+    </div>
+    <figcaption><b>11 · Saved offline</b> Blue, not green, so the volunteer knows the pickup is not yet confirmed by the server (MR-19). Conflicts found during sync go to the coordinator, never dropped silently.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="synced">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync online"><span>● Back online</span><small>4 pickups synced</small></div>
+      <div class="top" style="display:block">
+        <div class="progress"><span>Winter kits, December</span><span>95 / 214</span></div>
+        <div class="meter"><i style="width:44%"></i></div>
+      </div>
+      <div class="body">
+        <a class="lookup" href="#search" style="display:block;text-decoration:none">🔍 Name, phone or household code</a>
+        <div class="note" style="background:var(--stop-soft)"><b style="font-size:17px;color:var(--stop)">1 pickup needs the coordinator</b><br>Rania Haddad had already collected at 10:40 on another phone. Your pickup was kept and flagged.</div>
+        <a class="btn scan" href="#scan">▣ Scan QR card</a>
+      </div>
+    </div>
+    <figcaption><b>12 · Back online</b> The banner turns green and says how many pickups synced. A sync conflict is shown once, in plain words, and sent to the coordinator's review list.</figcaption>
   </figure>
 </div>
 
@@ -323,6 +440,9 @@
       <tr><td>Unknown card</td><td>Card not found</td><td>Search by name or phone instead</td></tr>
       <tr><td>Merged household</td><td>This card was replaced</td><td>Search for the household's current record</td></tr>
       <tr><td>Round not Open</td><td>Round is not open</td><td>Ask the coordinator to open it</td></tr>
+      <tr><td>Pickup recorded offline</td><td>Saved offline</td><td>Not yet confirmed. It will sync when signal returns.</td></tr>
+      <tr><td>Sync conflict</td><td>1 pickup needs the coordinator</td><td><i>Name</i> had already collected at <i>time</i> on another phone. Your pickup was kept and flagged.</td></tr>
+      <tr><td>Proxy pickup</td><td>Someone else is collecting</td><td>Name, relation, and an ID number or a note</td></tr>
     </table>
   </section>
   <section>
@@ -332,6 +452,8 @@
       <li>"Where / Table 2": do we record a distribution point per volunteer session? If not, drop that row.</li>
       <li>Should "Confirm" need a second tap (hold or double-confirm), or is one tap enough given coordinators can void?</li>
       <li>Expected count on screen 1: live while editing, or only after saving?</li>
+      <li>Proxy pickup: is a note enough when there is no ID, or should the coordinator approve those later?</li>
+      <li>Offline: should volunteers be blocked from recording pickups once the saved list is older than a set time (for example 2 hours)?</li>
     </ul>
   </section>
 </div>
