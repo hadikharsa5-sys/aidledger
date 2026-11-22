@@ -4,7 +4,9 @@ import { Prisma, type PrismaClient, type Role, type VulnerabilityFlag } from "@/
 // These take the acting user explicitly so they can be tested without a
 // session; the server actions that call them get the actor from auth.
 
-export type Actor = { userId: string; role: Role };
+// organisationId is the caller's own organisation (from their session).
+// Every query below is scoped to it, so one NGO can never touch another's data.
+export type Actor = { userId: string; role: Role; organisationId: string };
 
 export type Eligibility = {
   areas?: string[];
@@ -50,17 +52,21 @@ export async function recordPickup(
   const proxy = input.proxy ? normaliseProxy(input.proxy) : null;
   if (input.proxy && !proxy) return { status: 400, error: "proxy_incomplete" };
 
-  const round = await db.round.findUnique({ where: { id: input.roundId }, include: { items: true } });
+  // Only rounds and households of the caller's own organisation are visible.
+  // Another NGO's round or household looks exactly like one that doesn't exist (404),
+  // so the response doesn't reveal what other organisations have.
+  const round = await db.round.findFirst({
+    where: { id: input.roundId, organisationId: actor.organisationId },
+    include: { items: true },
+  });
   if (!round) return { status: 404, error: "round_not_found" };
   if (round.status !== "OPEN") return { status: 422, error: "round_not_open" };
 
-  const household = await db.household.findUnique({
-    where: { code: input.householdCode },
+  const household = await db.household.findFirst({
+    where: { code: input.householdCode, organisationId: actor.organisationId },
     include: { _count: { select: { members: true } } },
   });
-  if (!household || household.organisationId !== round.organisationId) {
-    return { status: 404, error: "household_not_found" };
-  }
+  if (!household) return { status: 404, error: "household_not_found" };
   if (household.status === "MERGED") return { status: 422, error: "household_merged" };
   if (household.status === "INACTIVE") return { status: 422, error: "household_inactive" };
 
@@ -157,8 +163,9 @@ export async function voidPickup(
   if (!reason) return { status: 400, error: "reason_required" };
 
   return db.$transaction(async (tx) => {
+    // Scoped to the caller's organisation: another NGO's pickup is "not found".
     const res = await tx.pickup.updateMany({
-      where: { id: input.pickupId, voidedAt: null },
+      where: { id: input.pickupId, voidedAt: null, round: { organisationId: actor.organisationId } },
       data: { voidedAt: new Date(), voidedById: actor.userId, voidReason: reason },
     });
     if (res.count === 0) return { status: 404 as const, error: "pickup_not_found_or_already_voided" };

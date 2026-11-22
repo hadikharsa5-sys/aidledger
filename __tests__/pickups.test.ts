@@ -28,8 +28,8 @@ describe.skipIf(!TEST_DB)("against Postgres", () => {
     // Enough connections that 20 parallel pickups really run at the same time.
     db = createPrismaClient(TEST_DB, { maxConnections: 30 });
     orgId = (await makeOrganisation(db)).id;
-    volunteer = { userId: (await makeUser(db, orgId, "VOLUNTEER")).id, role: "VOLUNTEER" };
-    coordinator = { userId: (await makeUser(db, orgId, "COORDINATOR")).id, role: "COORDINATOR" };
+    volunteer = { userId: (await makeUser(db, orgId, "VOLUNTEER")).id, role: "VOLUNTEER", organisationId: orgId };
+    coordinator = { userId: (await makeUser(db, orgId, "COORDINATOR")).id, role: "COORDINATOR", organisationId: orgId };
   });
   afterAll(async () => {
     await db?.$disconnect();
@@ -178,6 +178,45 @@ describe.skipIf(!TEST_DB)("against Postgres", () => {
     });
   });
 
+  describe("organisation isolation", () => {
+    // A coordinator and a volunteer from a different NGO.
+    const outsiders = async () => {
+      const other = await makeOrganisation(db);
+      return {
+        coordinator: { userId: (await makeUser(db, other.id, "COORDINATOR")).id, role: "COORDINATOR", organisationId: other.id } as Actor,
+        volunteer: { userId: (await makeUser(db, other.id, "VOLUNTEER")).id, role: "VOLUNTEER", organisationId: other.id } as Actor,
+      };
+    };
+
+    it("refuses to record a pickup in another organisation's round", async () => {
+      const r = await round();
+      const hh = await household();
+      const { volunteer: outsider } = await outsiders();
+
+      expect(await recordPickup(db, outsider, { roundId: r.id, householdCode: hh.code })).toEqual({
+        status: 404,
+        error: "round_not_found",
+      });
+      expect(await db.pickup.count({ where: { roundId: r.id } })).toBe(0);
+    });
+
+    it("refuses to void another organisation's pickup, and leaves it untouched", async () => {
+      const r = await round();
+      const hh = await household();
+      const pickup = await recordPickup(db, volunteer, { roundId: r.id, householdCode: hh.code });
+      if (pickup.status !== 201) throw new Error("setup failed");
+      const { coordinator: outsider } = await outsiders();
+
+      expect(await voidPickup(db, outsider, { pickupId: pickup.pickupId, reason: "not mine" })).toEqual({
+        status: 404,
+        error: "pickup_not_found_or_already_voided",
+      });
+      const stored = await db.pickup.findUniqueOrThrow({ where: { id: pickup.pickupId } });
+      expect(stored.voidedAt).toBeNull();
+      expect(await db.auditLog.count({ where: { entityId: pickup.pickupId, action: "PICKUP_VOIDED" } })).toBe(0);
+    });
+  });
+
   describe("S2 parallel pickup test (online part of MH-19)", () => {
     it(
       "20 volunteers record the same household at once: exactly 1 succeeds, 19 get 'already collected', 100 runs",
@@ -191,7 +230,7 @@ describe.skipIf(!TEST_DB)("against Postgres", () => {
         for (let run = 1; run <= RUNS; run++) {
           const hh = await household();
           const results = await Promise.all(
-            volunteers.map((v) => recordPickup(db, { userId: v.id, role: "VOLUNTEER" }, { roundId: r.id, householdCode: hh.code }))
+            volunteers.map((v) => recordPickup(db, { userId: v.id, role: "VOLUNTEER", organisationId: orgId }, { roundId: r.id, householdCode: hh.code }))
           );
           const ok = results.filter((x) => x.status === 201).length;
           const conflicts = results.filter((x) => x.status === 409 && x.existing.volunteer.length > 0).length;

@@ -1,0 +1,4 @@
+node_modules/
+dist/
+# scan results sent from phones (may include phone models)
+results/

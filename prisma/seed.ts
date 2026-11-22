@@ -7,6 +7,11 @@ import type { Role } from "../generated/prisma/client";
 import { createPrismaClient } from "../lib/db";
 import { generateHouseholds } from "./seed-data/households";
 
+// The demo users have a known password. Never create them in production.
+if (process.env.NODE_ENV === "production") {
+  throw new Error("Refusing to seed production");
+}
+
 const prisma = createPrismaClient();
 
 const DEMO_PASSWORD = "password123";

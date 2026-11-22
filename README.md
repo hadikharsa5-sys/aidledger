@@ -72,19 +72,19 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
 2. Create a branch named after the Jira ticket: `git checkout -b KAN-12-beneficiary-form`
 3. Commit your work and push the branch: `git push -u origin KAN-12-beneficiary-form`
 4. Open a Pull Request into `main` on GitHub and fill in the template.
-5. Automatic checks run: **CI** (lint, typecheck, tests and build against a Postgres service), a **Vercel preview deployment** and a **Claude code review** that comments on the PR.
+5. Automatic checks run: **CI** (lint, typecheck, tests and build against a Postgres service), a **Netlify deploy preview** and a **Claude code review** that comments on the PR.
 6. At least **one teammate must approve** the PR, and CI must pass, before it can be merged.
 7. Address review comments by pushing more commits to the same branch. Merge with "Squash and merge".
 
 ## Environments
 
-| Environment | Where                  | Database                          |
-| ----------- | ---------------------- | --------------------------------- |
-| Local       | `npm run dev`          | `aidledger_dev` in Docker         |
-| CI          | GitHub Actions         | Postgres service container        |
-| Preview     | Vercel, one URL per PR | Hosted dev database (Neon)        |
-| Production  | Vercel, from `main`    | Hosted production database (Neon) |
+| Environment | Where                                  | Database                   |
+| ----------- | -------------------------------------- | -------------------------- |
+| Local       | `npm run dev`                          | `aidledger_dev` in Docker  |
+| CI          | GitHub Actions                         | Postgres service container |
+| Preview     | Netlify deploy preview, one URL per PR | Neon `dev` branch          |
+| Production  | Netlify, from `main`                   | Neon `main` branch         |
 
-Hosted database URLs live only in Vercel and GitHub secrets, never in the repo.
+Hosted database URLs live only in Netlify environment variables, never in the repo.
 
 Rules of thumb: keep PRs small (one ticket each), never commit secrets or `.env` files, and use synthetic data only (no real beneficiary data).
