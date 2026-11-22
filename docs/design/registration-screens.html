@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AidLedger registration and duplicate screens</title>
+<style>
+  :root {
+    --ink: #111418;
+    --ink-2: #3d4651;
+    --line: #c9d0d8;
+    --paper: #ffffff;
+    --canvas: #e9edf1;
+    --brand: #14508a;
+    --ok: #0b6b34;
+    --stop: #a3150c;
+    --warn: #8a3a0b;
+    --ok-soft: #e3f3e8;
+    --stop-soft: #fbe7e5;
+    --warn-soft: #fbeee2;
+    --brand-soft: #eef3f9;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Arabic", sans-serif;
+    color: var(--ink);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); }
+  bdi { unicode-bidi: isolate; }
+  .page-head { max-width: 1200px; margin: 0 auto; padding: 24px 16px 8px; }
+  .page-head h1 { margin: 0 0 4px; font-size: 1.5rem; }
+  .page-head p { margin: 4px 0; color: var(--ink-2); max-width: 75ch; line-height: 1.45; }
+  .rules { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .rules li { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; }
+  .flow-title { max-width: 1200px; margin: 28px auto 0; padding: 0 16px; font-size: 1.05rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .gallery { max-width: 1200px; margin: 0 auto; padding: 12px 16px 40px; display: flex; flex-wrap: wrap; gap: 28px; }
+  figure { margin: 0; width: 340px; }
+  figure.wide { width: 560px; }
+  figcaption { font-size: 0.9rem; color: var(--ink-2); margin-top: 10px; line-height: 1.4; }
+  figcaption b { color: var(--ink); display: block; font-size: 1rem; }
+
+  .phone {
+    width: 340px; height: 700px; background: var(--paper);
+    border: 10px solid #1d232a; border-radius: 34px; overflow: hidden;
+    display: flex; flex-direction: column; position: relative;
+    box-shadow: 0 10px 30px rgba(17, 20, 24, 0.18);
+    scroll-margin-top: 20px;
+  }
+  .phone:target, .print:target { outline: 5px solid #f5b400; outline-offset: 4px; }
+  .bar { height: 26px; background: #1d232a; color: #fff; font-size: 12px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; flex: none; }
+  .sync { display: flex; gap: 8px; align-items: center; padding: 6px 14px; font-size: 14px; font-weight: 800; flex: none; background: var(--ok-soft); color: var(--ok); }
+  .sync small { font-weight: 600; font-size: 13px; }
+  .top { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); flex: none; }
+  .top a.back { font-size: 22px; text-decoration: none; color: var(--ink); width: 32px; }
+  .top h2 { margin: 0; font-size: 19px; }
+  .top small { display: block; color: var(--ink-2); font-size: 13px; font-weight: 400; }
+  .body { flex: 1; overflow-y: auto; padding: 14px; }
+  .foot { padding: 12px 14px 16px; border-top: 1px solid var(--line); flex: none; display: grid; gap: 8px; }
+
+  .steps { display: flex; gap: 6px; padding: 10px 14px 0; flex: none; }
+  .steps i { flex: 1; height: 6px; border-radius: 99px; background: #dde3e9; }
+  .steps i.on { background: var(--brand); }
+  .stepname { padding: 6px 14px 0; font-size: 13px; font-weight: 700; color: var(--ink-2); flex: none; }
+
+  label.f { display: block; font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .in { margin-top: 5px; border: 2px solid var(--line); border-radius: 10px; padding: 11px 12px; font-size: 17px; font-weight: 400; color: var(--ink); background: #fff; }
+  .in.muted { color: #6b7480; }
+  .in.err { border-color: var(--stop); }
+  .in.rtl { direction: rtl; text-align: right; unicode-bidi: plaintext; }
+  .errmsg { color: var(--stop); font-size: 14px; font-weight: 700; margin-top: 4px; }
+  .help { color: var(--ink-2); font-size: 13px; font-weight: 400; margin-top: 4px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip { border: 2px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 15px; font-weight: 600; }
+  .chip.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .chip.off { color: #9aa3ad; border-style: dashed; }
+  .optional { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .note { background: var(--brand-soft); border-radius: 10px; padding: 10px 12px; font-size: 15px; margin: 4px 0 12px; line-height: 1.4; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 2px solid var(--brand); border-radius: 10px; overflow: hidden; margin-top: 6px; }
+  .seg span { text-align: center; padding: 9px 0; font-weight: 700; font-size: 15px; color: var(--brand); }
+  .seg span.on { background: var(--brand); color: #fff; }
+  .seg.two { grid-template-columns: 1fr 1fr; }
+
+  .member { border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; }
+  .member .n { font-size: 17px; font-weight: 700; display: flex; justify-content: space-between; }
+  .member .n a { font-size: 14px; color: var(--brand); text-decoration: none; }
+  .member .d { font-size: 14px; color: var(--ink-2); margin-top: 2px; }
+
+  .btn { display: block; text-align: center; text-decoration: none; border-radius: 12px; padding: 16px; font-size: 19px; font-weight: 800; border: 3px solid transparent; }
+  .btn.primary { background: var(--brand); color: #fff; }
+  .btn.ok { background: var(--ok); color: #fff; }
+  .btn.warn { background: var(--warn); color: #fff; }
+  .btn.ghost { background: #fff; color: var(--ink); border-color: var(--ink); }
+  .btn.small { padding: 11px; font-size: 16px; }
+  .btn.disabled { background: #dde3e9; color: #6b7480; }
+
+  .script { border: 2px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; line-height: 1.5; margin-bottom: 12px; }
+  .script p { margin: 0 0 8px; }
+  .script .ver { font-size: 13px; color: var(--ink-2); font-weight: 700; }
+  .check { display: flex; gap: 10px; align-items: flex-start; border: 2px solid var(--brand); border-radius: 12px; padding: 12px; font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+  .check i { flex: none; width: 26px; height: 26px; border-radius: 6px; background: var(--brand); color: #fff; font-style: normal; display: grid; place-items: center; font-weight: 900; }
+
+  .state { color: #fff; padding: 22px 16px 20px; flex: none; }
+  .state.ok { background: var(--ok); }
+  .state.stop { background: var(--stop); }
+  .state.warn { background: var(--warn); }
+  .state .icon { width: 64px; height: 64px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 40px; font-weight: 900; margin-bottom: 10px; }
+  .state.ok .icon { color: var(--ok); }
+  .state.stop .icon { color: var(--stop); }
+  .state.warn .icon { color: var(--warn); }
+  .state h3 { margin: 0; font-size: 28px; line-height: 1.1; }
+  .state p { margin: 8px 0 0; font-size: 17px; line-height: 1.35; }
+  .who { font-size: 22px; font-weight: 800; margin: 0; }
+  .who-ar { font-size: 20px; font-weight: 700; margin: 2px 0 0; direction: rtl; text-align: left; unicode-bidi: plaintext; color: var(--ink-2); }
+  .meta { color: var(--ink-2); font-size: 15px; margin: 6px 0 12px; line-height: 1.4; }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; font-size: 17px; margin: 4px 0 14px; }
+  .facts dt { color: var(--ink-2); }
+  .facts dd { margin: 0; font-weight: 800; }
+
+  .similar { border: 2px solid var(--warn); background: var(--warn-soft); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+  .similar .n { font-size: 18px; font-weight: 800; }
+  .similar .d { font-size: 15px; color: var(--ink-2); margin-top: 2px; }
+  .why { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .why span { font-size: 13px; font-weight: 800; padding: 5px 8px; border-radius: 8px; background: #fff; color: var(--warn); border: 1px solid var(--warn); }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tabs span { white-space: nowrap; font-size: 13px; font-weight: 800; padding: 7px 10px; border-radius: 999px; border: 2px solid var(--line); }
+  .tabs span.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .pair { display: block; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; text-decoration: none; color: var(--ink); }
+  .pair .top2 { display: flex; justify-content: space-between; align-items: center; }
+  .pair .names { font-size: 16px; font-weight: 700; line-height: 1.35; }
+  .pair .names span { color: var(--ink-2); font-weight: 400; }
+  .score { font-size: 15px; font-weight: 900; padding: 6px 8px; border-radius: 8px; white-space: nowrap; }
+  .score.hi { background: var(--stop-soft); color: var(--stop); }
+  .score.mid { background: var(--warn-soft); color: var(--warn); }
+  .pair .why span { color: var(--ink-2); border-color: var(--line); }
+
+  .cmp { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 12px; table-layout: fixed; }
+  .cmp th { white-space: nowrap; text-align: left; font-size: 12px; padding: 6px 4px; border-bottom: 2px solid var(--ink); }
+  .cmp td { padding: 7px 4px; border-bottom: 1px solid #e5e9ee; vertical-align: top; overflow-wrap: anywhere; }
+  .cmp td:first-child { color: var(--ink-2); width: 74px; }
+  .cmp tr.same td:not(:first-child) { background: var(--warn-soft); font-weight: 800; }
+  .legend { font-size: 13px; color: var(--ink-2); margin: -4px 0 12px; }
+  .legend i { display: inline-block; width: 12px; height: 12px; background: var(--warn-soft); border: 1px solid var(--warn); vertical-align: -1px; margin-right: 4px; }
+  .pick { display: grid; gap: 8px; margin-bottom: 12px; }
+  .pick div { border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; }
+  .pick div.on { border: 3px solid var(--brand); background: var(--brand-soft); }
+  .pick div b { display: block; font-size: 17px; }
+  .pick div small { color: var(--ink-2); }
+
+  .print { background: var(--paper); border-radius: 12px; padding: 18px; box-shadow: 0 10px 30px rgba(17, 20, 24, 0.12); scroll-margin-top: 20px; }
+  .cards { display: flex; gap: 22px; align-items: flex-end; flex-wrap: wrap; }
+  .a6 { width: 300px; height: 212px; border: 2px dashed #9aa3ad; border-radius: 8px; padding: 14px; display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; }
+  .qr { width: 112px; height: 112px; display: grid; grid-template-columns: repeat(21, 1fr); background: #fff; }
+  .qr i { background: #111; }
+  .qr i.w { background: transparent; }
+  .a6 .org { font-size: 11px; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.05em; }
+  .a6 .code { white-space: nowrap; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 18px; font-weight: 900; margin: 6px 0; }
+  .a6 .small { font-size: 11px; color: var(--ink-2); line-height: 1.35; }
+  .a4 { width: 150px; height: 212px; border: 2px solid var(--line); border-radius: 4px; padding: 8px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 6px; }
+  .a4 span { border: 1px dashed #9aa3ad; border-radius: 3px; display: grid; place-items: center; font-size: 10px; color: var(--ink-2); }
+  .print .meta { margin-top: 12px; }
+
+  .notes { max-width: 1200px; margin: 0 auto; padding: 0 16px 48px; }
+  .notes section { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 14px; }
+  .notes h2 { margin: 0 0 8px; font-size: 1.1rem; }
+  .notes p { margin: 4px 0 10px; line-height: 1.45; color: var(--ink-2); }
+  .notes li { margin: 4px 0; line-height: 1.45; }
+  .notes table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  .notes th, .notes td { text-align: left; border-bottom: 1px solid var(--line); padding: 7px 8px; vertical-align: top; }
+  .notes code { font-size: 0.85rem; background: #f1f4f7; padding: 1px 4px; border-radius: 4px; }
+  @media (max-width: 600px) { figure, figure.wide { width: 100%; } .phone { width: 100%; } }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>AidLedger: registration and duplicate review screens</h1>
+  <p><b>AH-08 (KAN-42)</b>. High-fidelity, mobile-first designs for review by Hadi, in the same style as the pickup screens. Every button is a link: click through the flow and the target screen is highlighted. Sample data is fake.</p>
+  <p>Covers registration with consent (AH-09, AH-10), the household code and QR card (AH-11), the duplicate warning a volunteer sees (AH-13), and the coordinator's review queue and merge (AH-14, AH-15).</p>
+  <ul class="rules">
+    <li>Same type scale, colours and buttons as the pickup screens</li>
+    <li>Volunteers never see another family's phone, address or flags</li>
+    <li>Nothing merges without a coordinator</li>
+    <li>No household is saved without consent</li>
+    <li>Every on-screen text has a key, ready for translation</li>
+  </ul>
+</header>
+
+<h2 class="flow-title">Volunteer · register a household</h2>
+<div class="gallery">
+
+  <figure>
+    <div class="phone" id="head">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync">● Online <small>Registration needs signal</small></div>
+      <div class="top"><a class="back" href="#head">←</a><h2>New household <small>Step 1 of 3 · Head of household</small></h2></div>
+      <div class="steps"><i class="on"></i><i></i><i></i></div>
+      <div class="body">
+        <label class="f">Head of household name<div class="in">Mhmd Haddad</div><div class="help">Arabic or Latin, as the family spells it</div></label>
+        <label class="f">Phone <span class="optional">(optional)</span><div class="in">03 412 587</div><div class="help">Any format: 03 412 587, +961 3 412 587</div></label>
+        <label class="f">Area<div class="in">Tripoli - Qobbeh ▾</div></label>
+        <label class="f">Address <span class="optional">(optional)</span><div class="in muted">Street, building, floor</div></label>
+        <label class="f">Notes <span class="optional">(optional)</span><div class="in muted">Anything the coordinator should know</div></label>
+      </div>
+      <div class="foot"><a class="btn primary" href="#members">Next: family members</a></div>
+    </div>
+    <figcaption><b>1 · Head of household</b> Fields from AH-09. The name and phone are saved as typed; the normalised copies (AH-07) are made on the server, so the volunteer never sees them. Phone is optional because some families have none.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="members">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync">● Online <small>Registration needs signal</small></div>
+      <div class="top"><a class="back" href="#head">←</a><h2>Family members <small>Step 2 of 3 · Mhmd Haddad</small></h2></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i></i></div>
+      <div class="body">
+        <div class="member"><div class="n">Mhmd Haddad <a href="#members">Edit</a></div><div class="d">Head · Male · 40–59</div></div>
+        <div class="member"><div class="n"><bdi>زينب حداد</bdi> <a href="#members">Edit</a></div><div class="d">Spouse · Female · 40–59</div></div>
+        <div class="member"><div class="n">Karim Haddad <a href="#members">Edit</a></div><div class="d">Child · Male · 5–17</div></div>
+        <div class="member"><div class="n">Lina Haddad <a href="#members">Edit</a></div><div class="d">Child · Female · 0–4</div></div>
+        <a class="btn ghost small" href="#members">+ Add member</a>
+        <p class="meta" style="margin-top:12px">Household size: <b>4</b> (counted from the members)</p>
+        <label class="f">Vulnerability <span class="optional">(up to 3)</span>
+          <div class="chips">
+            <span class="chip on">Large family</span><span class="chip on">Displaced</span><span class="chip">Elderly</span><span class="chip">Disability</span><span class="chip">Single parent</span><span class="chip">Chronic illness</span><span class="chip">Other</span>
+          </div>
+        </label>
+      </div>
+      <div class="foot"><a class="btn primary" href="#consent">Next: consent</a></div>
+    </div>
+    <figcaption><b>2 · Members and flags</b> Each member: name, relation, sex, age band (AH-09). Household size is counted from the list, not typed, so the two can't disagree. A 4th flag can't be selected once 3 are on.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="consent">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync">● Online <small>Registration needs signal</small></div>
+      <div class="top"><a class="back" href="#members">←</a><h2>Consent <small>Step 3 of 3 · Read this to the family</small></h2></div>
+      <div class="steps"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      <div class="body">
+        <div class="seg two" style="margin:0 0 10px"><span class="on">English</span><span>العربية</span></div>
+        <div class="script">
+          <p class="ver">Consent text v1</p>
+          <p>We will keep your family's names, area and phone number so we can plan aid and avoid registering you twice.</p>
+          <p>Only our team can see them. We do not share them with anyone else.</p>
+          <p>You can ask us to stop using them at any time.</p>
+        </div>
+        <div class="check"><i>✓</i><span>I read this to the family and they agreed</span></div>
+        <p class="meta">Saved with the household: text version, date and time, and your name.</p>
+      </div>
+      <div class="foot"><a class="btn ok" href="#dupwarn">Save household</a></div>
+    </div>
+    <figcaption><b>3 · Consent</b> AH-10. "Save household" stays disabled until the box is ticked, and the API rejects any save without consent too. The text is placeholder wording for v1 and switches language without leaving the screen.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="dupwarn">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync">● Online <small>Registration needs signal</small></div>
+      <div class="state warn">
+        <div class="icon">!</div>
+        <h3>Possible duplicate</h3>
+        <p>This family may already be registered</p>
+      </div>
+      <div class="body">
+        <div class="similar">
+          <div class="n">Mohammad Haddad</div>
+          <div class="d"><bdi>محمد حداد</bdi> · Tripoli - Qobbeh · registered 3 Oct</div>
+          <div class="why"><span>Same phone</span><span>Similar name</span><span>Same area</span></div>
+        </div>
+        <p class="meta">Ask: "Did you register with us before, maybe with another volunteer?" If yes, don't save; search for them instead.</p>
+        <p class="meta">If you save anyway, a coordinator will check both records. Nothing is merged automatically.</p>
+      </div>
+      <div class="foot">
+        <a class="btn warn" href="#saved">Save anyway, send for review</a>
+        <a class="btn ghost small" href="#head">Go back and check</a>
+      </div>
+    </div>
+    <figcaption><b>4 · Possible duplicate</b> AH-13. Shown only when the score is above the threshold (AH-12). Dark orange + "!" like the pickup warnings, with a short headline so the details fit on screen. The volunteer sees the other family's name, area and why it matched, but not their phone, address or flags.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="saved">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="sync">● Online <small>Saved to the server</small></div>
+      <div class="state ok">
+        <div class="icon">✓</div>
+        <h3>Household registered</h3>
+        <p>Give the family their card</p>
+      </div>
+      <div class="body">
+        <p class="who">Mhmd Haddad</p>
+        <p class="who-ar">محمد حداد</p>
+        <dl class="facts">
+          <dt>Code</dt><dd>AL-7KQ3MX</dd>
+          <dt>People</dt><dd>4 · Tripoli - Qobbeh</dd>
+          <dt>Review</dt><dd>Sent to coordinator</dd>
+        </dl>
+        <p class="meta">If the family loses the card they can still be found by name or phone, and a coordinator can reprint it.</p>
+        <a class="btn ghost small" href="#card">Print card</a>
+      </div>
+      <div class="foot"><a class="btn primary" href="#head">Register next family</a></div>
+    </div>
+    <figcaption><b>5 · Saved</b> Green, tick, "Household registered". Shows the new code; "Review: sent to coordinator" only appears when screen 4 was shown. Main button starts the next family, since registration days are queues.</figcaption>
+  </figure>
+</div>
+
+<h2 class="flow-title">Household card · print</h2>
+<div class="gallery">
+  <figure class="wide">
+    <div class="print" id="card">
+      <div class="cards">
+        <div>
+          <div class="a6">
+            <div class="qr" id="qr"></div>
+            <div>
+              <div class="org">AidLedger · Demo NGO</div>
+              <div class="code">AL-7KQ3MX</div>
+              <div class="small">Show this card at distributions.<br>Lost it? Tell a volunteer; we can find you by name.</div>
+            </div>
+          </div>
+          <p class="meta">A6 card, actual layout</p>
+        </div>
+        <div>
+          <div class="a4"><span>card 1</span><span>card 2</span><span>card 3</span><span>card 4</span></div>
+          <p class="meta">A4 sheet: 4 cards, cut lines</p>
+        </div>
+      </div>
+      <p class="meta">The QR holds only the code text <b>AL-7KQ3MX</b>: no name, phone or area, so a lost card reveals nothing. The code is also printed in large type for when the camera fails. The QR pattern here is a placeholder.</p>
+    </div>
+    <figcaption><b>6 · QR card</b> AH-11. Prints on A6 or 4-up on A4. Uses the code format from the seed data (AL- + 6 characters, no 0/O or 1/I). Coordinators reprint a lost card from the household page.</figcaption>
+  </figure>
+</div>
+
+<h2 class="flow-title">Coordinator · review duplicates</h2>
+<div class="gallery">
+
+  <figure>
+    <div class="phone" id="queue">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#queue">←</a><h2>Possible duplicates <small>Managers and coordinators only</small></h2></div>
+      <div class="body">
+        <div class="tabs"><span class="on">Open · 3</span><span>Merged</span><span>Dismissed</span></div>
+        <a class="pair" href="#compare">
+          <div class="top2"><div class="names">Mhmd Haddad<br><span>Mohammad Haddad</span></div><span class="score hi">0.94</span></div>
+          <div class="why"><span>Same phone</span><span>Similar name</span><span>Same area</span></div>
+        </a>
+        <a class="pair" href="#compare">
+          <div class="top2"><div class="names"><bdi>فاطمة المصري</bdi><br><span>Fatme El Masri</span></div><span class="score hi">0.88</span></div>
+          <div class="why"><span>Same phone</span><span>Same area</span><span>3 of 4 members</span></div>
+        </a>
+        <a class="pair" href="#compare">
+          <div class="top2"><div class="names">Youssef Khoury<br><span>Yusuf Khouri</span></div><span class="score mid">0.71</span></div>
+          <div class="why"><span>Similar name</span><span>Same area</span></div>
+        </a>
+        <p class="meta">Highest score first. A pair marked "Not a duplicate" never comes back.</p>
+      </div>
+    </div>
+    <figcaption><b>7 · Review queue</b> AH-14. Each pair shows its score and the readable reasons stored with it (AH-12). Server-checked: volunteers get a "not allowed" page, not an empty list.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="compare">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#queue">←</a><h2>Compare <small>Score 0.94 · flagged 22 Nov</small></h2></div>
+      <div class="body">
+        <table class="cmp">
+          <tr><th></th><th>A · AL-4HP9TW</th><th>B · AL-7KQ3MX</th></tr>
+          <tr><td>Name</td><td>Mohammad Haddad<br><bdi>محمد حداد</bdi></td><td>Mhmd Haddad</td></tr>
+          <tr class="same"><td>Phone</td><td><bdi>03 412 587</bdi></td><td><bdi>+961 3 412587</bdi></td></tr>
+          <tr class="same"><td>Area</td><td>Tripoli - Qobbeh</td><td>Tripoli - Qobbeh</td></tr>
+          <tr><td>Members</td><td>4: Zeinab, Karim, Lina</td><td>4: <bdi>زينب</bdi>, Karim, Lina</td></tr>
+          <tr><td>Flags</td><td>Large family</td><td>Large family, Displaced</td></tr>
+          <tr><td>Registered</td><td>3 Oct · Volunteer Rami</td><td>22 Nov · Volunteer Sara</td></tr>
+          <tr><td>Pickups</td><td>2 (last: Nov round)</td><td>None</td></tr>
+        </table>
+        <p class="legend"><i></i>same after normalising (spelling and phone format ignored)</p>
+      </div>
+      <div class="foot">
+        <a class="btn primary" href="#merge">Merge these two</a>
+        <a class="btn ghost small" href="#queue">Not a duplicate</a>
+      </div>
+    </div>
+    <figcaption><b>8 · Side by side</b> Full details, because only managers and coordinators get here. Rows that match after normalisation are highlighted, so "03 412 587" and "+961 3 412587" read as the same phone. Both decisions go to the audit log.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="merge">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="top"><a class="back" href="#compare">←</a><h2>Merge <small>Choose the record to keep</small></h2></div>
+      <div class="body">
+        <div class="pick">
+          <div class="on"><b>Keep A · AL-4HP9TW</b><small>Older record, has pickup history</small></div>
+          <div><b>Keep B · AL-7KQ3MX</b><small>Newer record</small></div>
+        </div>
+        <div class="note">
+          Moving to A: members, consent records and pickup history.<br>
+          Card <b>AL-7KQ3MX</b> will point to A, so it can't be used to collect twice.
+        </div>
+        <p class="meta">You can't undo a merge from this screen. It's logged with your name and the time.</p>
+      </div>
+      <div class="foot">
+        <a class="btn primary" href="#merged">Merge into A</a>
+        <a class="btn small" style="background:var(--stop);color:#fff" href="#blocked">demo: both collected this round</a>
+      </div>
+    </div>
+    <figcaption><b>9 · Choose survivor</b> AH-15. The coordinator picks which record survives; the older one with pickups is pre-selected. The screen spells out what moves, so the result isn't a surprise. The red "demo" button stands in for the blocked case.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="merged">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="state ok">
+        <div class="icon">✓</div>
+        <h3>Merged</h3>
+        <p>One household now: AL-4HP9TW</p>
+      </div>
+      <div class="body">
+        <p class="who">Mohammad Haddad</p>
+        <p class="who-ar">محمد حداد</p>
+        <dl class="facts">
+          <dt>Kept</dt><dd>AL-4HP9TW</dd>
+          <dt>Old card</dt><dd>AL-7KQ3MX now opens this record</dd>
+          <dt>By</dt><dd>Coordinator Hadi, 11:52</dd>
+        </dl>
+      </div>
+      <div class="foot"><a class="btn primary" href="#queue">Next pair</a></div>
+    </div>
+    <figcaption><b>10 · Merged</b> Confirms which code survived and that the old card now points to it. Back to the queue for the next pair.</figcaption>
+  </figure>
+
+  <figure>
+    <div class="phone" id="blocked">
+      <div class="bar"><span>9:41</span><span>▮▮▮ 4G</span></div>
+      <div class="state stop">
+        <div class="icon">✕</div>
+        <h3>Can't merge yet</h3>
+        <p>Both records collected in the open round</p>
+      </div>
+      <div class="body">
+        <dl class="facts">
+          <dt>Round</dt><dd>Winter kits, December</dd>
+          <dt>A</dt><dd>Collected 15 Dec, 10:12</dd>
+          <dt>B</dt><dd>Collected 15 Dec, 13:40</dd>
+        </dl>
+        <p class="meta">This family may have received two kits. Check with the volunteers, decide what to do, then void one pickup. You can merge after that.</p>
+      </div>
+      <div class="foot">
+        <a class="btn ghost" href="#compare">Back to the pair</a>
+      </div>
+    </div>
+    <figcaption><b>11 · Merge blocked</b> AH-15: if both records have a pickup in the open round, the merge is stopped and the pair stays flagged. Red + "✕", the same as "Already collected" at pickup.</figcaption>
+  </figure>
+</div>
+
+<div class="notes">
+  <section>
+    <h2>Messages and text keys</h2>
+    <p>Every text on screen comes from a key, so translating later means adding an Arabic file, not editing screens. Names and other user data are never part of a message; they're inserted with <code>{placeholders}</code>.</p>
+    <table>
+      <tr><th>Key</th><th>English</th></tr>
+      <tr><td><code>register.step1.title</code></td><td>New household</td></tr>
+      <tr><td><code>register.name.label</code></td><td>Head of household name</td></tr>
+      <tr><td><code>register.name.help</code></td><td>Arabic or Latin, as the family spells it</td></tr>
+      <tr><td><code>register.phone.error</code></td><td>This doesn't look like a Lebanese phone number</td></tr>
+      <tr><td><code>register.flags.max</code></td><td>Up to 3 can be selected</td></tr>
+      <tr><td><code>register.offline</code></td><td>No signal. Registration needs a connection; try again when you're back online.</td></tr>
+      <tr><td><code>consent.confirm</code></td><td>I read this to the family and they agreed</td></tr>
+      <tr><td><code>consent.required</code></td><td>The family must agree before you can save</td></tr>
+      <tr><td><code>duplicate.warning.title</code></td><td>Possible duplicate</td></tr>
+      <tr><td><code>duplicate.warning.body</code></td><td>This family may already be registered</td></tr>
+      <tr><td><code>duplicate.reason.phone</code> · <code>.name</code> · <code>.area</code> · <code>.members</code></td><td>Same phone · Similar name · Same area · {n} of {total} members</td></tr>
+      <tr><td><code>duplicate.saveAnyway</code></td><td>Save anyway, send for review</td></tr>
+      <tr><td><code>register.saved.title</code></td><td>Household registered</td></tr>
+      <tr><td><code>review.notDuplicate</code></td><td>Not a duplicate</td></tr>
+      <tr><td><code>merge.blocked.title</code></td><td>Can't merge yet</td></tr>
+      <tr><td><code>merge.blocked.body</code></td><td>Both records collected in the open round</td></tr>
+    </table>
+  </section>
+  <section>
+    <h2>Where the ticket and the database schema differ</h2>
+    <table>
+      <tr><th>AH-09 asks for</th><th>Schema (KAN-56 branch) has</th><th>Proposal</th></tr>
+      <tr><td>Member age band, sex</td><td><code>birthYear</code>, <code>relation</code>; no sex</td><td>Add <code>sex</code> and an <code>ageBand</code> (or keep birthYear and show bands). Designs use age bands.</td></tr>
+      <tr><td>Household size</td><td>No field; count of members</td><td>Count from members (as designed), no separate field</td></tr>
+      <tr><td>Notes</td><td>No field</td><td>Add <code>Household.notes</code> (optional)</td></tr>
+      <tr><td>Up to 3 flags</td><td>7 flags, no limit</td><td>Enforce 3 in server validation</td></tr>
+    </table>
+  </section>
+</div>
+
+<script>
+  (function () {
+    var n = 21, el = document.getElementById("qr"), seed = 7;
+    function finder(r, c) {
+      var rr = r % 14 === r ? r : r - 14, cc = c % 14 === c ? c : c - 14;
+      if (r >= 7 && r < 14) return null;
+      if (c >= 7 && c < 14) return null;
+      if (r >= 14 && c >= 14) return null;
+      if (rr < 0 || cc < 0 || rr > 6 || cc > 6) return null;
+      var edge = rr === 0 || rr === 6 || cc === 0 || cc === 6;
+      var core = rr >= 2 && rr <= 4 && cc >= 2 && cc <= 4;
+      return edge || core;
+    }
+    for (var r = 0; r < n; r++) {
+      for (var c = 0; c < n; c++) {
+        var f = finder(r, c);
+        seed = (seed * 1103515245 + 12345) % 2147483648;
+        var on = f === null ? (seed >> 16) % 2 === 0 : f;
+        var i = document.createElement("i");
+        if (!on) i.className = "w";
+        el.appendChild(i);
+      }
+    }
+  })();
+</script>
+</body>
+</html>
