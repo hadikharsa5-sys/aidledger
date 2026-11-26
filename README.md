@@ -85,6 +85,17 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
 | Preview     | Netlify deploy preview, one URL per PR | Neon `dev` branch          |
 | Production  | Netlify, from `main`                   | Neon `main` branch         |
 
-Hosted database URLs live only in Netlify environment variables, never in the repo.
+Hosted database URLs live only in Netlify environment variables, never in the repo. Each hosted environment also
+needs its own `AUTH_SECRET` (generate with `npx auth secret`).
+
+## Login
+
+Auth.js (`next-auth` v5) with email and password, set up in `auth.ts` and `auth.config.ts`.
+
+- `proxy.ts` sends anyone who isn't logged in to `/login`.
+- Sessions end after **15 minutes** without activity (`SESSION_IDLE_SECONDS` in `auth.config.ts`), because volunteers
+  share phones. Every request restarts the clock.
+- The session holds the user's id, role and organisation: `const session = await auth()` then `session.user.role`.
+- Passwords are stored as bcrypt hashes. Deactivated users can't log in.
 
 Rules of thumb: keep PRs small (one ticket each), never commit secrets or `.env` files, and use synthetic data only (no real beneficiary data).
