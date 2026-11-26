@@ -2,6 +2,7 @@
 
 import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/auth";
+import { isLocalPath } from "@/auth.config";
 
 export type LoginState = { error: string; email: string } | undefined;
 
@@ -12,7 +13,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
     await signIn("credentials", {
       email,
       password: formData.get("password"),
-      redirectTo: typeof callbackUrl === "string" && callbackUrl.startsWith("/") ? callbackUrl : "/",
+      redirectTo: isLocalPath(callbackUrl) ? callbackUrl : "/",
     });
   } catch (err) {
     // signIn redirects by throwing; only real login failures are caught here.

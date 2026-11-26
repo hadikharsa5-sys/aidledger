@@ -33,3 +33,8 @@ export const authConfig = {
     },
   },
 } satisfies NextAuthConfig;
+
+// "/rounds" yes; "//evil.com" and "/\\evil.com" no (browsers treat both as another site).
+export function isLocalPath(url: unknown): url is string {
+  return typeof url === "string" && url.startsWith("/") && !url.startsWith("//") && !url.startsWith("/\\");
+}

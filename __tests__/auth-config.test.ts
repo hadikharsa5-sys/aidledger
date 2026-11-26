@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { authConfig, SESSION_IDLE_SECONDS } from "@/auth.config";
+import { authConfig, isLocalPath, SESSION_IDLE_SECONDS } from "@/auth.config";
 
 type Authorized = Parameters<typeof authConfig.callbacks.authorized>[0];
 const authorized = (pathname: string, loggedIn: boolean) =>
@@ -35,4 +35,11 @@ describe("auth config", () => {
     } as unknown as SessionArgs);
     expect(session.user).toMatchObject({ id: "u1", role: "COORDINATOR", organisationId: "org1" });
   });
+});
+
+describe("isLocalPath", () => {
+  it.each(["/", "/rounds", "/rounds?id=1"])("allows %s", (url) => expect(isLocalPath(url)).toBe(true));
+  it.each(["//evil.com", "/\\evil.com", "https://evil.com", "evil.com", "", null, undefined])("refuses %s", (url) =>
+    expect(isLocalPath(url)).toBe(false)
+  );
 });
