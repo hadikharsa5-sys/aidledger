@@ -64,6 +64,19 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
 - Tests that need the database run against `TEST_DATABASE_URL`; pending migrations are applied to it automatically
   before the tests start (`__tests__/setup/migrate-test-db.ts`).
 
+## Permissions
+
+Who can do what lives in one place: `lib/permissions.ts` (the MVP Plan permission table). Check it on the server at
+the start of every server action and route handler, never only by hiding buttons:
+
+```ts
+const denied = authorize(actor, "round.manage");
+if (denied) return denied; // { status: 403, error: "forbidden" }
+```
+
+Use `can(role, "household.viewFlags")` when a role only changes what is shown. Changing a row means changing the
+table in `__tests__/permissions.test.ts` too.
+
 ## How we work
 
 `main` is protected. Nobody (including the lead) pushes to it directly.
