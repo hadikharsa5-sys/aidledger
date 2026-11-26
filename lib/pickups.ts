@@ -1,4 +1,8 @@
-import { Prisma, type PrismaClient, type Role, type VulnerabilityFlag } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient, type Role } from "@/generated/prisma/client";
+import { checkEligibility, type Eligibility, type IneligibleReason } from "@/lib/eligibility";
+
+// Re-exported so existing imports from "@/lib/pickups" keep working.
+export { checkEligibility, type Eligibility } from "@/lib/eligibility";
 
 // Recording and voiding pickups (MR-12, MR-14, MR-16).
 // These take the acting user explicitly so they can be tested without a
@@ -7,12 +11,6 @@ import { Prisma, type PrismaClient, type Role, type VulnerabilityFlag } from "@/
 // organisationId is the caller's own organisation (from their session).
 // Every query below is scoped to it, so one NGO can never touch another's data.
 export type Actor = { userId: string; role: Role; organisationId: string };
-
-export type Eligibility = {
-  areas?: string[];
-  flags?: VulnerabilityFlag[]; // household must have at least one of these
-  minHouseholdSize?: number;
-};
 
 export type Proxy = { name: string; relation: string; idOrNote: string };
 
@@ -27,7 +25,7 @@ export type PickupResult =
   | { status: 403; error: "forbidden" }
   | { status: 404; error: "household_not_found" | "round_not_found" }
   | { status: 422; error: "round_not_open" | "household_merged" | "household_inactive" }
-  | { status: 422; error: "not_eligible"; reason: "area" | "flags" | "household_size" };
+  | { status: 422; error: "not_eligible"; reason: IneligibleReason };
 
 const PICKUP_ROLES: Role[] = ["ADMIN", "MANAGER", "COORDINATOR", "VOLUNTEER"];
 const VOID_ROLES: Role[] = ["ADMIN", "COORDINATOR"];
@@ -134,18 +132,6 @@ function normaliseProxy(p: Proxy): Proxy | null {
   const relation = p.relation?.trim();
   const idOrNote = p.idOrNote?.trim();
   return name && relation && idOrNote ? { name, relation, idOrNote } : null;
-}
-
-/** Returns the first rule the household fails, or null if it is eligible. */
-export function checkEligibility(
-  rules: Eligibility | null,
-  household: { area: string; flags: VulnerabilityFlag[]; size: number }
-): "area" | "flags" | "household_size" | null {
-  if (!rules) return null;
-  if (rules.areas?.length && !rules.areas.includes(household.area)) return "area";
-  if (rules.flags?.length && !rules.flags.some((f) => household.flags.includes(f))) return "flags";
-  if (rules.minHouseholdSize && household.size < rules.minHouseholdSize) return "household_size";
-  return null;
 }
 
 /**
