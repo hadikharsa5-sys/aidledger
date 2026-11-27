@@ -61,8 +61,23 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
   `Pickup_one_per_household_per_round`, hand-written in
   `prisma/migrations/*_init/migration.sql` (Prisma's schema file can't express it). Voided pickups don't count, so a
   household can collect again after a coordinator voids a mistake. Don't replace it with `@@unique`.
+- Every change worth auditing writes its row with `writeAudit(tx, actor, { action, entity, entityId, before, after })`
+  from `lib/audit.ts`, using the same transaction client `tx` as the change, so both commit or roll back together.
 - Tests that need the database run against `TEST_DATABASE_URL`; pending migrations are applied to it automatically
   before the tests start (`__tests__/setup/migrate-test-db.ts`).
+
+## Permissions
+
+Who can do what lives in one place: `lib/permissions.ts` (the MVP Plan permission table). Check it on the server at
+the start of every server action and route handler, never only by hiding buttons:
+
+```ts
+const denied = authorize(actor, "round.manage");
+if (denied) return denied; // { status: 403, error: "forbidden" }
+```
+
+Use `can(role, "household.viewFlags")` when a role only changes what is shown. Changing a row means changing the
+table in `__tests__/permissions.test.ts` too.
 
 ## How we work
 
@@ -85,6 +100,17 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
 | Preview     | Netlify deploy preview, one URL per PR | Neon `dev` branch          |
 | Production  | Netlify, from `main`                   | Neon `main` branch         |
 
-Hosted database URLs live only in Netlify environment variables, never in the repo.
+Hosted database URLs live only in Netlify environment variables, never in the repo. Each hosted environment also
+needs its own `AUTH_SECRET` (generate with `npx auth secret`).
+
+## Login
+
+Auth.js (`next-auth` v5) with email and password, set up in `auth.ts` and `auth.config.ts`.
+
+- `proxy.ts` sends anyone who isn't logged in to `/login`.
+- Sessions end after **15 minutes** without activity (`SESSION_IDLE_SECONDS` in `auth.config.ts`), because volunteers
+  share phones. Every request restarts the clock.
+- The session holds the user's id, role and organisation: `const session = await auth()` then `session.user.role`.
+- Passwords are stored as bcrypt hashes. Deactivated users can't log in.
 
 Rules of thumb: keep PRs small (one ticket each), never commit secrets or `.env` files, and use synthetic data only (no real beneficiary data).

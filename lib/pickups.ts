@@ -1,4 +1,10 @@
-import { Prisma, type PrismaClient, type Role, type VulnerabilityFlag } from "@/generated/prisma/client";
+import { Prisma, type PrismaClient, type Role } from "@/generated/prisma/client";
+import { writeAudit } from "@/lib/audit";
+import { checkEligibility, type Eligibility, type IneligibleReason } from "@/lib/eligibility";
+import { authorize } from "@/lib/permissions";
+
+// Re-exported so existing imports from "@/lib/pickups" keep working.
+export { checkEligibility, type Eligibility } from "@/lib/eligibility";
 
 // Recording and voiding pickups (MR-12, MR-14, MR-16).
 // These take the acting user explicitly so they can be tested without a
@@ -7,12 +13,6 @@ import { Prisma, type PrismaClient, type Role, type VulnerabilityFlag } from "@/
 // organisationId is the caller's own organisation (from their session).
 // Every query below is scoped to it, so one NGO can never touch another's data.
 export type Actor = { userId: string; role: Role; organisationId: string };
-
-export type Eligibility = {
-  areas?: string[];
-  flags?: VulnerabilityFlag[]; // household must have at least one of these
-  minHouseholdSize?: number;
-};
 
 export type Proxy = { name: string; relation: string; idOrNote: string };
 
@@ -27,10 +27,7 @@ export type PickupResult =
   | { status: 403; error: "forbidden" }
   | { status: 404; error: "household_not_found" | "round_not_found" }
   | { status: 422; error: "round_not_open" | "household_merged" | "household_inactive" }
-  | { status: 422; error: "not_eligible"; reason: "area" | "flags" | "household_size" };
-
-const PICKUP_ROLES: Role[] = ["ADMIN", "MANAGER", "COORDINATOR", "VOLUNTEER"];
-const VOID_ROLES: Role[] = ["ADMIN", "COORDINATOR"];
+  | { status: 422; error: "not_eligible"; reason: IneligibleReason };
 
 /**
  * Record that a household collected its items in a round.
@@ -47,7 +44,8 @@ export async function recordPickup(
   actor: Actor,
   input: { roundId: string; householdCode: string; point?: string | null; proxy?: Proxy | null }
 ): Promise<PickupResult> {
-  if (!PICKUP_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "pickup.record");
+  if (denied) return denied;
 
   const proxy = input.proxy ? normaliseProxy(input.proxy) : null;
   if (input.proxy && !proxy) return { status: 400, error: "proxy_incomplete" };
@@ -93,14 +91,11 @@ export async function recordPickup(
           proxyIdOrNote: proxy?.idOrNote ?? null,
         },
       });
-      await tx.auditLog.create({
-        data: {
-          userId: actor.userId,
-          action: "PICKUP_RECORDED",
-          entity: "Pickup",
-          entityId: created.id,
-          after: { roundId: round.id, householdId: household.id, itemsGiven, proxy },
-        },
+      await writeAudit(tx, actor, {
+        action: "PICKUP_RECORDED",
+        entity: "Pickup",
+        entityId: created.id,
+        after: { roundId: round.id, householdId: household.id, itemsGiven, proxy },
       });
       return created;
     });
@@ -136,18 +131,6 @@ function normaliseProxy(p: Proxy): Proxy | null {
   return name && relation && idOrNote ? { name, relation, idOrNote } : null;
 }
 
-/** Returns the first rule the household fails, or null if it is eligible. */
-export function checkEligibility(
-  rules: Eligibility | null,
-  household: { area: string; flags: VulnerabilityFlag[]; size: number }
-): "area" | "flags" | "household_size" | null {
-  if (!rules) return null;
-  if (rules.areas?.length && !rules.areas.includes(household.area)) return "area";
-  if (rules.flags?.length && !rules.flags.some((f) => household.flags.includes(f))) return "flags";
-  if (rules.minHouseholdSize && household.size < rules.minHouseholdSize) return "household_size";
-  return null;
-}
-
 /**
  * Void a pickup recorded by mistake (MR-16). Coordinator or Admin only,
  * reason required. Voided pickups are ignored by the unique index, so the
@@ -158,7 +141,8 @@ export async function voidPickup(
   actor: Actor,
   input: { pickupId: string; reason: string }
 ): Promise<{ status: 200 } | { status: 400 | 403 | 404; error: string }> {
-  if (!VOID_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "pickup.void");
+  if (denied) return denied;
   const reason = input.reason?.trim();
   if (!reason) return { status: 400, error: "reason_required" };
 
@@ -169,14 +153,11 @@ export async function voidPickup(
       data: { voidedAt: new Date(), voidedById: actor.userId, voidReason: reason },
     });
     if (res.count === 0) return { status: 404 as const, error: "pickup_not_found_or_already_voided" };
-    await tx.auditLog.create({
-      data: {
-        userId: actor.userId,
-        action: "PICKUP_VOIDED",
-        entity: "Pickup",
-        entityId: input.pickupId,
-        after: { reason },
-      },
+    await writeAudit(tx, actor, {
+      action: "PICKUP_VOIDED",
+      entity: "Pickup",
+      entityId: input.pickupId,
+      after: { reason },
     });
     return { status: 200 as const };
   });
