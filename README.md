@@ -61,6 +61,8 @@ Prisma 7 with PostgreSQL. Schema: `prisma/schema.prisma`, config: `prisma.config
   `Pickup_one_per_household_per_round`, hand-written in
   `prisma/migrations/*_init/migration.sql` (Prisma's schema file can't express it). Voided pickups don't count, so a
   household can collect again after a coordinator voids a mistake. Don't replace it with `@@unique`.
+- Every change worth auditing writes its row with `writeAudit(tx, actor, { action, entity, entityId, before, after })`
+  from `lib/audit.ts`, using the same transaction client `tx` as the change, so both commit or roll back together.
 - Tests that need the database run against `TEST_DATABASE_URL`; pending migrations are applied to it automatically
   before the tests start (`__tests__/setup/migrate-test-db.ts`).
 
