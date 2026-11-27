@@ -4,7 +4,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { createPrismaClient } from "@/lib/db";
 import { checkEligibility, parseEligibility, type Eligibility } from "@/lib/eligibility";
 import type { Actor } from "@/lib/pickups";
-import { changeRoundStatus, createRound, getExpectedList, updateRound, type RoundInput } from "@/lib/rounds";
+import { changeRoundStatus, createRound, getExpectedList, getRound, listRounds, updateRound, type RoundInput } from "@/lib/rounds";
 import { generateHouseholds } from "../prisma/seed-data/households";
 import { makeHousehold, makeOrganisation, makeUser } from "./helpers/factory";
 
@@ -183,6 +183,28 @@ describe.skipIf(!TEST_DB)("rounds against Postgres", () => {
     it("refuses volunteers (server-checked)", async () => {
       const id = await create();
       expect(await updateRound(db, volunteer, id, { name: "x" })).toEqual({ status: 403, error: "forbidden" });
+    });
+  });
+
+  describe("reading rounds for the pages", () => {
+    it("lists only the caller's organisation's rounds, for every role", async () => {
+      const id = await create();
+      const other = await makeOrganisation(db);
+      const outsider: Actor = { userId: (await makeUser(db, other.id, "COORDINATOR")).id, role: "COORDINATOR", organisationId: other.id };
+
+      expect((await listRounds(db, volunteer)).map((r) => r.id)).toContain(id);
+      expect((await listRounds(db, outsider)).map((r) => r.id)).not.toContain(id);
+    });
+
+    it("returns one round with its items and rules, or null for another organisation", async () => {
+      const id = await create({ eligibility: { areas: ["Mina"] } });
+      const round = await getRound(db, volunteer, id);
+      expect(round?.items.map((i) => i.name)).toEqual(["Food parcel"]);
+      expect(round?.eligibility).toEqual({ areas: ["Mina"] });
+
+      const other = await makeOrganisation(db);
+      const outsider: Actor = { userId: (await makeUser(db, other.id, "VOLUNTEER")).id, role: "VOLUNTEER", organisationId: other.id };
+      expect(await getRound(db, outsider, id)).toBeNull();
     });
   });
 

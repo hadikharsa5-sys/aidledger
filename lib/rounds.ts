@@ -1,14 +1,14 @@
-import type { Prisma, PrismaClient, Role, RoundStatus } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient, RoundStatus } from "@/generated/prisma/client";
+import { writeAudit, type AuditAction } from "@/lib/audit";
+import { authorize } from "@/lib/permissions";
 import { listEligibleHouseholds, parseEligibility, type Eligibility, type ExpectedHousehold } from "@/lib/eligibility";
 import type { Actor } from "@/lib/pickups";
 
 // Distribution rounds (MR-10) and their expected list (MR-11).
 // Like lib/pickups.ts these take the acting user explicitly; the server actions
-// that call them get the actor from the session (HK-12) and will switch to the
-// shared role check (HK-13) and audit helper (HK-15) once those land.
+// that call them get the actor from the session (HK-12). Role checks use the
+// shared permission table (HK-13) and audit rows go through writeAudit (HK-15).
 
-const EDIT_ROLES: Role[] = ["ADMIN", "COORDINATOR"];
-const VIEW_ROLES: Role[] = ["ADMIN", "MANAGER", "COORDINATOR"];
 
 // The only allowed moves. No going back: a closed round stays closed, and an
 // open round can't return to draft once pickups may have been recorded.
@@ -87,12 +87,12 @@ function validate(input: Partial<RoundInput>, partial: boolean): { ok: true; val
 function audit(
   tx: Prisma.TransactionClient,
   actor: Actor,
-  action: string,
+  action: AuditAction,
   roundId: string,
   before: Prisma.InputJsonValue | undefined,
   after: Prisma.InputJsonValue
 ) {
-  return tx.auditLog.create({ data: { userId: actor.userId, action, entity: "Round", entityId: roundId, before, after } });
+  return writeAudit(tx, actor, { action, entity: "Round", entityId: roundId, before, after });
 }
 
 /** MR-10: create a round. It always starts as DRAFT. */
@@ -101,7 +101,8 @@ export async function createRound(
   actor: Actor,
   input: RoundInput
 ): Promise<{ status: 201; roundId: string } | Failure> {
-  if (!EDIT_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "round.manage");
+  if (denied) return denied;
   const v = validate(input, false);
   if (!v.ok) return { status: 400, error: v.error };
   const { name, date, location, items = [], eligibility = {} } = v.value;
@@ -137,7 +138,8 @@ export async function updateRound(
   roundId: string,
   input: Partial<RoundInput>
 ): Promise<{ status: 200 } | Failure> {
-  if (!EDIT_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "round.manage");
+  if (denied) return denied;
   const v = validate(input, true);
   if (!v.ok) return { status: 400, error: v.error };
 
@@ -196,7 +198,8 @@ export async function changeRoundStatus(
   roundId: string,
   to: RoundStatus
 ): Promise<{ status: 200; from: RoundStatus; to: RoundStatus } | Failure> {
-  if (!EDIT_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "round.manage");
+  if (denied) return denied;
 
   const round = await db.round.findFirst({
     where: { id: roundId, organisationId: actor.organisationId },
@@ -231,7 +234,8 @@ export async function getExpectedList(
   actor: Actor,
   roundId: string
 ): Promise<{ status: 200; count: number; households: ExpectedHousehold[] } | Failure> {
-  if (!VIEW_ROLES.includes(actor.role)) return { status: 403, error: "forbidden" };
+  const denied = authorize(actor, "round.viewExpected");
+  if (denied) return denied;
   const round = await db.round.findFirst({
     where: { id: roundId, organisationId: actor.organisationId },
     select: { eligibility: true },
@@ -241,4 +245,57 @@ export async function getExpectedList(
   const rules = parsed.ok ? parsed.rules : {};
   const households = await listEligibleHouseholds(db, actor.organisationId, rules);
   return { status: 200, count: households.length, households };
+}
+
+export type RoundSummary = {
+  id: string;
+  name: string;
+  date: Date;
+  location: string;
+  status: RoundStatus;
+  itemCount: number;
+  pickupCount: number;
+};
+
+/** Every round of the caller's organisation, newest date first. Any signed-in role. */
+export async function listRounds(db: PrismaClient, actor: Actor): Promise<RoundSummary[]> {
+  const rounds = await db.round.findMany({
+    where: { organisationId: actor.organisationId },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      name: true,
+      date: true,
+      location: true,
+      status: true,
+      _count: { select: { items: true, pickups: { where: { voidedAt: null } } } },
+    },
+  });
+  return rounds.map(({ _count, ...r }) => ({ ...r, itemCount: _count.items, pickupCount: _count.pickups }));
+}
+
+/** One round with its items and rules, or null when it isn't in the caller's organisation. */
+export async function getRound(db: PrismaClient, actor: Actor, roundId: string) {
+  const round = await db.round.findFirst({
+    where: { id: roundId, organisationId: actor.organisationId },
+    include: {
+      items: { orderBy: { name: "asc" } },
+      createdBy: { select: { name: true } },
+      _count: { select: { pickups: { where: { voidedAt: null } } } },
+    },
+  });
+  if (!round) return null;
+  const parsed = parseEligibility(round.eligibility);
+  return { ...round, eligibility: parsed.ok ? parsed.rules : ({} as Eligibility), pickupCount: round._count.pickups };
+}
+
+/** The areas the organisation's households live in, for the eligibility picker. */
+export async function listAreas(db: PrismaClient, actor: Actor): Promise<string[]> {
+  const rows = await db.household.findMany({
+    where: { organisationId: actor.organisationId, status: "ACTIVE" },
+    distinct: ["area"],
+    select: { area: true },
+    orderBy: { area: "asc" },
+  });
+  return rows.map((r) => r.area);
 }
